@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 앱 이름: 이 한 줄만 바꾸고 build.sh를 다시 실행하면 이름이 바뀝니다 -->
+    <string name="app_name">신양愛소리</string>
+</resources>

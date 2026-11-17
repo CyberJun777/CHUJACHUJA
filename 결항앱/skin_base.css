@@ -1,0 +1,41 @@
+/* Skin: clean blue on white. One loud thing: the main-screen header, whose wave is drawn from the live buoy wave height and wind. Everything else stays flat and quiet: hairline cards, no decorative shadows. */
+:root{--hero:#1D4FD7;--shadow:0 12px 32px rgba(29,79,215,.14);
+  --font:'Gothic A1',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif;--mono:var(--font)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--hero:#2456E0;--shadow:none} }
+:root[data-theme="dark"]{--hero:#2456E0;--shadow:none}
+body{letter-spacing:-.012em;line-height:1.55}
+.app{gap:14px}.view{gap:14px}
+section{border-radius:18px;padding:20px;border:1px solid var(--line)}
+h2{font-size:15px;font-weight:700;color:var(--ink)}
+.top{position:relative;display:block;background:var(--hero);border-radius:28px;padding:28px 24px 92px;overflow:hidden}
+.top h1{color:#fff;font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.2;gap:6px}
+.top h1 small{color:rgba(255,255,255,.8);font-size:13px;font-weight:500;letter-spacing:-.01em}
+.top .now{margin:18px 0 0;color:#fff;font-size:15px;font-weight:600}
+.top .wave{position:absolute;left:0;bottom:0;width:200%;height:70px;display:block}
+@media (prefers-reduced-motion:no-preference){.wv{animation:drift 14s linear infinite}.wv.slow{animation-duration:22s}}
+@keyframes drift{to{transform:translateX(-50%)}}
+.door{border-radius:22px;border:1px solid var(--line);box-shadow:none}
+.door .body{padding:0 20px 20px;gap:8px}.door .body.pad{padding-top:20px}
+.door strong{font-size:20px;font-weight:800;letter-spacing:-.025em}
+.door p{font-size:14px}
+.go{align-self:flex-start;margin-top:6px;background:var(--hero);color:#fff;font-weight:700;font-size:14px;border-radius:12px;padding:10px 16px}
+.back{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px 7px 12px;font-size:13.5px}
+.vt{font-size:26px;font-weight:800;letter-spacing:-.03em}
+.seg{background:var(--none);border-radius:14px;padding:4px}
+.seg button{border-radius:10px;padding:10px 6px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--sea);box-shadow:none;font-weight:700}
+section .seg{background:var(--bg)}
+.map{border-radius:18px;border:1px solid var(--line)}
+.cta{border-radius:12px;padding:14px 16px;background:var(--hero);color:#fff;font-weight:700}
+.cta[aria-pressed="true"]{background:var(--sea-soft);color:var(--sea)}
+.notice{border:0;background:var(--sea-soft);border-radius:14px;padding:12px 14px;color:var(--ink)}
+.advice,.heads{border-radius:12px}
+.presets button,.mgrid button{background:var(--bg);border-radius:10px}
+.presets button[aria-pressed="true"],.mgrid button[aria-pressed="true"]{background:var(--hero);color:#fff}
+.wx div{border-radius:12px;padding:12px 14px}
+.vtag{padding:2px 8px}
+.pick .no{border-radius:12px;width:44px;height:44px}
+.plist button{padding:11px 0}.plist i{border-radius:8px}
+.gauge .num,.pc,.wx b,.facts b,.fc .p{font-weight:800;letter-spacing:-.03em}
+.months i{border-radius:5px 5px 0 0}
+

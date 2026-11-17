@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+안드로이드앱/빌드소스/out/
+안드로이드앱/빌드소스/app/assets/
+안드로이드앱/빌드소스/tools/*.jar
+안드로이드앱/빌드소스/tools/*.keystore
+안드로이드앱/빌드소스/tools/signer/*.class

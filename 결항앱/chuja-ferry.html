@@ -1,0 +1,815 @@
+<title>추자 뱃길 예보</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one phone-width column. Verdict on top, the two conditions that drive it below, then today's live status, then the record behind the number. */
+:root{
+  --bg:#F1F4F9; --surface:#FFFFFF; --ink:#111827; --muted:#6B7280; --line:#E6E9EF;
+  --sea:#2563EB; --sea-soft:#E8F0FE;
+  --ok:#16A34A; --warn:#D97706; --bad:#DC2626; --dot:#A9BEDF; --none:#E5E9F0;
+  --font:'IBM Plex Sans KR',system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0B1020; --surface:#151B2E; --ink:#EEF2FF; --muted:#98A2B8; --line:#27304A;
+  --sea:#6B98FF; --sea-soft:#1B2A52; --ok:#4ADE80; --warn:#FBBF24; --bad:#F87171; --dot:#4B5F8A; --none:#1E2740; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0B1020; --surface:#151B2E; --ink:#EEF2FF; --muted:#98A2B8; --line:#27304A;
+  --sea:#6B98FF; --sea-soft:#1B2A52; --ok:#4ADE80; --warn:#FBBF24; --bad:#F87171; --dot:#4B5F8A; --none:#1E2740; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px}
+.notice{font-size:12.5px;color:var(--muted);border:1px dashed var(--line);border-radius:10px;padding:9px 12px}
+.notice b{color:var(--ink);font-weight:600}
+section{background:var(--surface);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
+h2{font-size:14px;font-weight:600;margin:0;color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:6px;background:var(--bg);padding:4px;border-radius:12px}
+button{font:inherit;border:0;cursor:pointer;color:var(--ink);background:transparent}
+.seg button{border-radius:9px;padding:8px 6px;font-size:13.5px;font-weight:500;line-height:1.3;min-width:0}
+.seg button small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:600}
+section .seg{background:var(--bg)}
+button:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.verdict{align-items:center;text-align:center;gap:6px}
+.gauge{position:relative;width:210px;max-width:100%}
+.gauge svg{display:block;width:100%}
+.gauge .num{position:absolute;left:0;right:0;bottom:2px;font-family:var(--mono);font-weight:600;font-size:46px;line-height:1;font-variant-numeric:tabular-nums}
+.gauge .num small{font-size:20px}
+.label{font-size:19px;font-weight:700}
+.basis{font-size:13.5px;color:var(--muted);max-width:34ch;text-wrap:balance}
+.basis b{color:var(--ink);font-family:var(--mono)}
+.advice{background:var(--sea-soft);border-radius:12px;padding:11px 14px;font-size:13.5px;text-align:left;width:100%}
+.mgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.mgrid button{background:var(--bg);border-radius:9px;padding:8px 0;font-size:13px;font-variant-numeric:tabular-nums}
+.mgrid button[aria-pressed="true"]{background:var(--sea);color:var(--surface);font-weight:600}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{background:var(--bg);border-radius:999px;padding:7px 13px;font-size:13px}
+.presets button[aria-pressed="true"]{background:var(--sea);color:var(--surface);font-weight:600}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl output{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.ctl input{grid-column:1/-1;width:100%;accent-color:var(--sea);margin:4px 0 0}
+input:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+canvas{width:100%;height:auto;display:block}
+.legend span{white-space:nowrap}
+.fc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.fc li{border-top:1px solid var(--line)} .fc li:first-child{border-top:0}
+.fc button{display:grid;grid-template-columns:4.6em 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;padding:10px 0;font-size:13.5px}
+.fc .d{font-weight:600} .fc .d small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.fc .w{min-width:0;color:var(--muted);font-size:12.5px} .fc .w b{display:block;color:var(--ink);font-weight:500;font-size:13.5px}
+.fc .p{font-family:var(--mono);font-weight:600;font-size:17px;font-variant-numeric:tabular-nums}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-weight:500;font-size:14px}
+.hint{font-size:12px;color:var(--muted)}
+.sched{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.sched li{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px}
+.sched li:first-child{border-top:0}
+.sched time{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.sched div{min-width:0}
+.sched em{font-style:normal;color:var(--muted);font-size:12px;display:block}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--none);color:var(--muted)}
+.pill.ok{background:var(--ok);color:var(--surface)} .pill.go{background:var(--sea);color:var(--surface)} .pill.bad{background:var(--bad);color:var(--surface)}
+.wx{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.wx div{background:var(--bg);border-radius:12px;padding:10px 12px;min-width:0}
+.wx b{font-family:var(--mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.wx span{display:block;font-size:12px;color:var(--muted)}
+.alert{display:flex;gap:8px;align-items:center;font-size:13.5px;font-weight:600}
+.alert i{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.alert.on i{background:var(--bad)}
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:120px}
+.months div{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;height:100%;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.months i{display:block;width:100%;border-radius:4px 4px 0 0;background:var(--dot);min-height:2px}
+.months .now i{background:var(--sea)} .months .now{color:var(--ink);font-weight:600}
+.months em{font-style:normal;font-family:var(--mono);font-size:10px}
+.strip{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:2px}
+.strip i{aspect-ratio:1;border-radius:2px;background:var(--none)}
+.strip .s0{background:var(--dot)} .strip .s1{background:var(--warn)} .strip .s2{background:var(--bad)}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:var(--c)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.facts b{display:block;font-family:var(--mono);font-size:18px;font-variant-numeric:tabular-nums}
+.facts span{font-size:12px;color:var(--muted)}
+.acc{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.acc th{font-weight:500;color:var(--muted);font-size:12px;text-align:right;padding:4px 0 6px}
+.acc td{padding:8px 0;border-top:1px solid var(--line);text-align:right}
+.acc th:first-child,.acc td:first-child{text-align:left}
+.acc td b{font-weight:700}
+.how{font-size:13px;color:var(--muted);margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+@media (prefers-reduced-motion:no-preference){ .months i{transition:height .25s} }
+/* Skin: clean blue on white. One loud thing: the main-screen header, whose wave is drawn from the live buoy wave height and wind. Everything else stays flat and quiet: hairline cards, no decorative shadows. */
+:root{--hero:#1D4FD7;--shadow:0 12px 32px rgba(29,79,215,.14);
+  --font:'Gothic A1',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif;--mono:var(--font)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--hero:#2456E0;--shadow:none} }
+:root[data-theme="dark"]{--hero:#2456E0;--shadow:none}
+body{letter-spacing:-.012em;line-height:1.55}
+.app{gap:14px}.view{gap:14px}
+section{border-radius:18px;padding:20px;border:1px solid var(--line)}
+h2{font-size:15px;font-weight:700;color:var(--ink)}
+.top{position:relative;display:block;background:var(--hero);border-radius:28px;padding:28px 24px 92px;overflow:hidden}
+.top h1{color:#fff;font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.2;gap:6px}
+.top h1 small{color:rgba(255,255,255,.8);font-size:13px;font-weight:500;letter-spacing:-.01em}
+.top .now{margin:18px 0 0;color:#fff;font-size:15px;font-weight:600}
+.top .wave{position:absolute;left:0;bottom:0;width:200%;height:70px;display:block}
+@media (prefers-reduced-motion:no-preference){.wv{animation:drift 14s linear infinite}.wv.slow{animation-duration:22s}}
+@keyframes drift{to{transform:translateX(-50%)}}
+.door{border-radius:22px;border:1px solid var(--line);box-shadow:none}
+.door .body{padding:0 20px 20px;gap:8px}.door .body.pad{padding-top:20px}
+.door strong{font-size:20px;font-weight:800;letter-spacing:-.025em}
+.door p{font-size:14px}
+.go{align-self:flex-start;margin-top:6px;background:var(--hero);color:#fff;font-weight:700;font-size:14px;border-radius:12px;padding:10px 16px}
+.back{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px 7px 12px;font-size:13.5px}
+.vt{font-size:26px;font-weight:800;letter-spacing:-.03em}
+.seg{background:var(--none);border-radius:14px;padding:4px}
+.seg button{border-radius:10px;padding:10px 6px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--sea);box-shadow:none;font-weight:700}
+section .seg{background:var(--bg)}
+.map{border-radius:18px;border:1px solid var(--line)}
+.cta{border-radius:12px;padding:14px 16px;background:var(--hero);color:#fff;font-weight:700}
+.cta[aria-pressed="true"]{background:var(--sea-soft);color:var(--sea)}
+.notice{border:0;background:var(--sea-soft);border-radius:14px;padding:12px 14px;color:var(--ink)}
+.advice,.heads{border-radius:12px}
+.presets button,.mgrid button{background:var(--bg);border-radius:10px}
+.presets button[aria-pressed="true"],.mgrid button[aria-pressed="true"]{background:var(--hero);color:#fff}
+.wx div{border-radius:12px;padding:12px 14px}
+.vtag{padding:2px 8px}
+.pick .no{border-radius:12px;width:44px;height:44px}
+.plist button{padding:11px 0}.plist i{border-radius:8px}
+.gauge .num,.pc,.wx b,.facts b,.fc .p{font-weight:800;letter-spacing:-.03em}
+.months i{border-radius:5px 5px 0 0}
+
+/* 모바일 디자인 개선: 기존 데이터 및 스크립트 보존 */
+@font-face{font-family:'Sinyang Hanja';src:url(data:font/woff2;base64,d09GMk9UVE8AAAZkAA8AAAAACngAAAYSAAIBBgAAAAAAAAAAAAAAAAAAAAAAAAAAGYFeDYltGyAcgQAGYA4IADQBNgIkAwgEBgWDNgcgFyQYCBtwCVGUUE4qwI/D2A39wMqs1KwwGlvjaoiVDz5c8p/X+zo3L/976DdWRtBmJJe7blnD7VauWLmVw/O5e1/4FA64BbWVQKIN5ZyepmJAENEX28sxMf3P5Lod//+9qvfnZeKYOKYtsNiiBCwRecm+2avd3FOaG3BrRcdY1A1YkLKUwLsMr5Zw79YngQBo0a2dCE1mdmElgubMaD+S12hHH5K3PNiFIAU9cEB+8pXHB5FMDQAQIMKVBx8nyzJsNyPMWdtEyjXgs3QjZRsibJU9bZ2tK8f/NGHnRocGBttqPwDsBQiBW68DQJgORAFEZFs8ND5UIQ+OZeQX9A4HP6ApWPVHpf10+um8Z3T96UI/XYWfbuynvfgnwMj+L/6/6mwYdtaYq1wDEPcvGN1cAEUxevz4ZPbjm9HbWVw2ev34ZQENkdq0bW7v4oPr/KIXcs0YwMElUCJ4aySEVOZ+a8DgBB9aNIQmoIZ/CO/Qlfz/IEMjPHgtR/iamr68wbYQrGC/IBcDPL+Uizmrzd/L6eCnjS0AYTCvvWPo6fenjkFNpDaYWzu4qa205oYcAU/9IEsYrMRlg/3itsqgIPbBQNkrBBCBCSAItMAsTCPcpxSk3f56sLYOdKEaUDPcLgcT/yalXDhuT4HaCUjdBCqXnEfv/6kz3LB1+0PtnubVMV7/mex9kyntS3kiFmnsamTku3SC92Bs9KB1H2X4ghks0tlNz98VhVrIdktab8T06JADEK8EArU/mm2WeaGqL1yNhDkZpfGlIwWzfwp5/RLb+zvk6l4+aCguBNVOcZyE9wABo7gAv5XwXc/+Ib7RmcC26q7GFgcGXUwIki9xnDvLQBfq4bqH+qa6xtEXpSKs06O9pqwbhRpIX01Kb+jkYL8DeFXOLgoLMAWcfdXkxJqw2mtIVoNER1HCatt678rQiPtMz9IAZPaEXOGQJ6lmvrG/dBZINADxHkCeRwHBBoj5A7n4ivMNvXV1kL8CcrZC5qHbiYPlmSO7Pi8huI80NzY01TfHltgDVeSgsVGMkO4fLJ0XLeCSdtgs8gn358UX0+kuH5Qnf1zn8rq6WHjpBaGUN8fAZiOgZ9ivBYS14e6G2fEtqtKwaBNPEwvfZVferZGBg+YdIg8A47sYIjut6b3h0yMDBKS8Cdf93BVgRbwWEW2Dre3VA6Klh0gI91iK2aKOrcbmCmlYm3dLU2nfC3WQ4brknuCp4V6Hk8LTouNiFMrD4qH/h+Tv5ebj6B/aOt423VEawtsc2DbcMeoYYhdhFyNKmG6abZ/umvVa6lsPhkx+kBoF6SnV8Y39JTMokKwHYp2AOg2IzkA4CMgmll9o6K1tgBzlkNAo1v08ebo6f4JyGjvb9y9mq+CXkXJbgLyoYB868/sqRs9W84J/agdHQ0+1QHM6k0DMBE6GKEm6S5CtmoMhVgA9dxjngIV5guyaeeoxwhhx7I5Eyk4l55Po/+O5/mLVh24QdokbpY2is1tRJwo9nE39DpS7LrkjpHKR+FAqElM4XLZQoTXO2iCqBQKghzNXtGjt0UJESqwoiOCsLXdi0UskIhGJSERaLTVHRfW5lTxYjkUT+ofa+qEFZB9EaCQtSyiY31aD0pcz9oyOoQKEXaEWQAH9FTUjIlmAYFAhJdcCI3K6JAepwwmOYMPKNiBuE2+vCoKb8FrIqfvAhlHhQAAMgDUGyheK4IwI1C+Xokib8+8RADxXIPWb3l2pxSzxm5axjwDwarhQQ8f9tf3z0TCsMW++WgCAEeL2/2fAcAOD/+/5OiCkDiX2Ee0kcVDaXQ0N6tUkUQegEop1BK5SJ8AU4zqGQqsrRTydCu0ePkSNgETgEi5CmHBRgj1GwF24NO2GtOrA+ek2nlYNixdKprpCyHgUsE3iQHX0B6YYx7N34SrIBo3hMuQrwAmWy9M7dJnQTzYqQoiwtIUoCXKUdOVIaE5ERqSvPqOC75YgTaYS6bJU6zBqTI9cO4g3P9nd1GRbVZxUJBxD8qnCWBzTAbI+HfVxndCe1tEUjM4KJdHbFSay64oM0a+yhgjDyRz09b9xWlAq0r8GzwBR2vDlCw==) format('woff2');unicode-range:U+611B;font-style:normal;font-weight:100 900;font-display:swap;}
+/* 신양愛소리 — presentation-only overrides for the existing WebView DOM.
+   Map geometry, SVG palette variables, data and JS state selectors stay intact. */
+:root {
+  --bg: #f3f6fb;
+  --surface: #ffffff;
+  --ink: #18283b;
+  --muted: #526279;
+  --line: #dce4ef;
+  --sea: #2358ab;
+  --sea-soft: #eaf1ff;
+  --hero: #204fc1;
+  --none: #e8eef7;
+  --ok: #246e48;
+  --warn: #955100;
+  --bad: #b42c31;
+  --c1: #2054ae;
+  --c2: #aa3b20;
+  --c3: #237947;
+  --c4: #875800;
+  --c5: #6344aa;
+  --on: #ffffff;
+  --warn-soft: #fff3dd;
+  --polish-surface-soft: #f5f8fd;
+  --polish-hero-text: #ffffff;
+  --polish-note-border: #bdcfe8;
+  --polish-focus: #1753b1;
+  --polish-ok-bg: #e7f4eb;
+  --polish-ok-ink: #1d603d;
+  --polish-bad-bg: #ffeded;
+  --polish-bad-ink: #9e252b;
+  --polish-go-bg: #e2f1f8;
+  --polish-go-ink: #155b82;
+  --font: 'Gothic A1', 'Sinyang Hanja', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f192b;
+    --surface: #18283d;
+    --ink: #f0f4fa;
+    --muted: #b9c8d9;
+    --line: #344961;
+    --sea: #a2c8ff;
+    --sea-soft: #243a58;
+    --hero: #2454b5;
+    --none: #293d54;
+    --ok: #9ee0b4;
+    --warn: #ffce83;
+    --bad: #ffabab;
+    --warn-soft: #4b3920;
+    --polish-surface-soft: #20354b;
+    --polish-hero-text: #ffffff;
+    --polish-note-border: #506e91;
+    --polish-focus: #b5d6ff;
+    --polish-ok-bg: #24483c;
+    --polish-ok-ink: #c2f0d1;
+    --polish-bad-bg: #523337;
+    --polish-bad-ink: #ffd3d1;
+    --polish-go-bg: #294959;
+    --polish-go-ink: #c5e7f5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f192b;
+  --surface: #18283d;
+  --ink: #f0f4fa;
+  --muted: #b9c8d9;
+  --line: #344961;
+  --sea: #a2c8ff;
+  --sea-soft: #243a58;
+  --hero: #2454b5;
+  --none: #293d54;
+  --ok: #9ee0b4;
+  --warn: #ffce83;
+  --bad: #ffabab;
+  --warn-soft: #4b3920;
+  --polish-surface-soft: #20354b;
+  --polish-hero-text: #ffffff;
+  --polish-note-border: #506e91;
+  --polish-focus: #b5d6ff;
+  --polish-ok-bg: #24483c;
+  --polish-ok-ink: #c2f0d1;
+  --polish-bad-bg: #523337;
+  --polish-bad-ink: #ffd3d1;
+  --polish-go-bg: #294959;
+  --polish-go-ink: #c5e7f5;
+  color-scheme: dark;
+}
+
+html { background: var(--bg); }
+body {
+  margin: 0;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-right: calc(16px + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(16px + env(safe-area-inset-left, 0px));
+  color: var(--ink);
+  background: var(--bg);
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: -.015em;
+  -webkit-text-size-adjust: 100%;
+}
+.app { width: 100%; max-width: 480px; gap: 16px; }
+.view { min-width: 0; gap: 16px; }
+.view > * { min-width: 0; }
+section {
+  min-width: 0;
+  padding: 20px;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+h2 { color: var(--ink); font-size: 17px; line-height: 1.4; font-weight: 700; letter-spacing: -.025em; }
+p, li { overflow-wrap: break-word; }
+.sub, .hint { color: var(--muted); line-height: 1.6; }
+.sub { font-size: 15px; }
+.hint { font-size: 15px; }
+
+/* Buttons retain their native button elements, handlers and pressed states. */
+button { min-height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible, .mk:focus-visible {
+  outline: 3px solid var(--polish-focus);
+  outline-offset: 3px;
+}
+@supports not selector(:focus-visible) {
+  button:focus, input:focus, .mk:focus { outline: 3px solid var(--polish-focus); outline-offset: 3px; }
+}
+button:disabled { cursor: default; opacity: .6; }
+
+/* Home: the existing sea and map illustration remain the primary identity. */
+.top {
+  padding: 27px 23px 85px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 24px;
+  background: var(--hero);
+}
+.top h1 { gap: 9px; color: var(--polish-hero-text); font-size: 29px; line-height: 1.2; }
+.top h1 small { color: #eaf1ff; font-size: 15px; line-height: 1.55; letter-spacing: -.01em; }
+.top .now { margin-top: 17px; color: #fff; font-size: 15px; line-height: 1.6; }
+.top .wave { height: 65px; }
+.door {
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 21px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: none;
+}
+.door .pic { display: block; border-bottom: 1px solid var(--line); }
+.door .body { gap: 9px; padding: 19px 20px 21px; }
+.door .body.pad { padding-top: 20px; }
+.door strong { display: flex; color: var(--ink); font-size: 20px; line-height: 1.35; }
+.door p { color: var(--muted); font-size: 15px; line-height: 1.6; }
+.door .go {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 5px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--hero);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.35;
+}
+#door-map { border-color: var(--polish-note-border); }
+#door-map .body { padding-top: 19px; }
+#boatRows { display: block; width: 100%; margin-top: 1px; }
+.mini {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.mini > span:first-child { min-width: 0; font-weight: 700; }
+.mini small { margin-top: 2px; color: var(--muted); font-size: 15px; font-weight: 400; line-height: 1.5; word-break: keep-all; overflow-wrap: break-word; }
+.pc { font-size: 18px; white-space: nowrap; }
+.heads, .advice {
+  padding: 13px 15px;
+  border: 1px solid var(--polish-note-border);
+  border-radius: 13px;
+  background: var(--sea-soft);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.heads.warn { border-color: transparent; background: var(--warn-soft); }
+.heads b { font-weight: 700; }
+
+/* Snapshot and explanatory messages: no generated copy or invented status. */
+.snapshot-banner, .notice {
+  padding: 15px 16px;
+  border: 1px solid var(--polish-note-border);
+  border-left: 4px solid var(--sea);
+  border-radius: 14px;
+  background: var(--sea-soft);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.snapshot-banner b, .snapshot-banner strong, .notice b { color: var(--ink); font-weight: 700; }
+#livenote {
+  padding: 12px 14px;
+  border: 1px solid var(--polish-note-border);
+  border-radius: 12px;
+  background: var(--sea-soft);
+  color: var(--ink);
+}
+.sound-hint {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--polish-surface-soft);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.section-kicker { color: var(--sea); font-size: 13px; font-weight: 700; letter-spacing: .02em; line-height: 1.4; }
+
+/* Map navigation, markers and selected place. */
+.back {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  padding: 9px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--sea);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.vt { font-size: 25px; line-height: 1.3; }
+header { align-items: flex-end; flex-wrap: wrap; gap: 8px 12px; }
+header > div { min-width: 0; }
+#today { font-size: 14px; font-weight: 600; }
+.seg, section .seg {
+  min-width: 0;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--polish-surface-soft);
+}
+.seg button {
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.seg button small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.seg button[aria-pressed="true"] {
+  border-color: var(--polish-note-border);
+  background: var(--surface);
+  color: var(--sea);
+  box-shadow: none;
+  font-weight: 700;
+}
+.zoom button { font-size: 14px; }
+.zoom button[data-z="sy"] { font-weight: 700; }
+.map { border: 1px solid var(--polish-note-border); border-radius: 18px; }
+.map svg { width: 100%; height: auto; }
+.lg, .legend { gap: 8px 14px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.lg span::before, .legend span::before { width: 10px; height: 10px; margin-right: 6px; }
+.pick { grid-template-columns: 44px minmax(0, 1fr); gap: 3px 12px; }
+.pick .no { width: 44px; height: 44px; border-radius: 13px; }
+.pick b { min-width: 0; font-size: 18px; line-height: 1.4; }
+.pick span { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.pick p { margin: 9px 0 0; font-size: 15px; line-height: 1.65; }
+.vtag { display: inline-block; margin-left: 5px; padding: 3px 8px; font-size: 12px; line-height: 1.4; }
+.plist h3 { margin: 13px 0 4px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.plist li:first-child h3 { color: var(--sea); font-size: 15px; font-weight: 700; }
+.plist button {
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 52px;
+  padding: 10px 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.plist i { width: 28px; height: 28px; font-size: 12px; }
+.plist small { color: var(--muted); font-size: 14px; text-align: right; line-height: 1.4; }
+.plist button[aria-pressed="true"] span { color: var(--sea); font-weight: 700; }
+.more { gap: 8px; padding-left: 20px; font-size: 15px; line-height: 1.6; }
+.cta {
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: var(--hero);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.cta[aria-pressed="true"] { border-color: var(--polish-note-border); background: var(--sea-soft); color: var(--sea); }
+
+/* Ferry: probabilities, forecasts and controls remain readable and separate. */
+.verdict { gap: 9px; padding: 24px 20px 20px; }
+.gauge { width: 220px; }
+.gauge .num { font-size: 48px; }
+.gauge .num small { font-size: 21px; }
+.label { font-size: 20px; line-height: 1.4; }
+.basis { color: var(--muted); font-size: 15px; line-height: 1.6; }
+.advice { margin-top: 5px; }
+.presets { gap: 8px; }
+.presets button, .mgrid button {
+  min-height: 44px;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--polish-surface-soft);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+}
+.presets button[aria-pressed="true"], .mgrid button[aria-pressed="true"] {
+  border-color: var(--hero);
+  background: var(--hero);
+  color: #fff;
+}
+.ctl { gap: 4px 12px; }
+.ctl label, .ctl output { font-size: 15px; }
+.ctl input[type="range"] { min-height: 44px; margin: 0; accent-color: var(--sea); }
+.fc button {
+  grid-template-columns: 4.2em minmax(0, 1fr) auto;
+  gap: 9px;
+  min-height: 64px;
+  padding: 13px 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.fc .d small { margin-top: 2px; font-size: 13px; }
+.fc .w, .fc .w b { font-size: 15px; line-height: 1.5; }
+.fc .p { font-size: 18px; white-space: nowrap; }
+.sched li { grid-template-columns: 3.4em minmax(0, 1fr) auto; gap: 9px; padding: 12px 0; font-size: 15px; }
+.sched em { margin-top: 2px; font-size: 15px; line-height: 1.5; }
+.pill, .pill.go {
+  align-self: center;
+  margin: 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--none);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.pill.ok { background: var(--polish-ok-bg); color: var(--polish-ok-ink); }
+.pill.go { background: var(--polish-go-bg); color: var(--polish-go-ink); }
+.pill.bad { background: var(--polish-bad-bg); color: var(--polish-bad-ink); }
+.alert { align-items: flex-start; gap: 9px; font-size: 15px; line-height: 1.5; }
+.alert i { margin-top: 6px; }
+.wx { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.wx div { padding: 13px; border: 1px solid var(--line); border-radius: 13px; background: var(--polish-surface-soft); font-size: 15px; line-height: 1.5; }
+.wx b { font-size: 20px; }
+.wx span { font-size: 15px; line-height: 1.5; }
+canvas { max-width: 100%; height: auto; }
+.months { min-width: 0; gap: 4px; height: 132px; }
+.months div { min-width: 0; font-size: 11px; }
+.months em { font-size: 11px; }
+.strip { min-width: 0; gap: 2px; }
+.axis { font-size: 12px; }
+.facts { gap: 7px; }
+.facts div { min-width: 0; padding: 9px 3px; border-radius: 10px; background: var(--polish-surface-soft); }
+.facts b { font-size: 18px; }
+.facts span { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.acc { width: 100%; table-layout: fixed; font-size: 14px; }
+.acc th { padding: 6px 2px 9px; color: var(--muted); font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.acc td { padding: 10px 2px; line-height: 1.45; overflow-wrap: anywhere; }
+.how { gap: 9px; padding-left: 20px; color: var(--muted); font-size: 15px; line-height: 1.65; }
+
+/* Home navigation: four clear choices anchored to the lower edge. */
+.home-intro { padding: 18px 4px 3px; }
+.home-intro h2 { margin: 7px 0 9px; color: var(--ink); font-size: 24px; line-height: 1.38; letter-spacing: -.04em; }
+.home-intro p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
+.home-data { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.home-source { margin-bottom: 90px; }
+.bottom-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 9px max(10px, env(safe-area-inset-right)) calc(9px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left)); border-top: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: 0 -8px 24px rgba(18,42,72,.08); backdrop-filter: blur(14px); }
+.bottom-nav button { display: flex; min-width: 0; min-height: 62px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 5px 2px; border: 0; border-radius: 13px; background: transparent; color: var(--muted); font-size: 11px; line-height: 1.2; text-align: center; }
+.bottom-nav button:first-child, .bottom-nav button:focus-visible { background: var(--sea-soft); color: var(--sea); }
+.bottom-nav b { font-weight: 700; overflow-wrap: anywhere; }
+.menu-icon { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 9px; background: var(--hero); color: #fff; font-size: 17px; font-weight: 700; line-height: 1; }
+.info-card { padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.info-card h3 { margin: 7px 0 8px; color: var(--ink); font-size: 20px; line-height: 1.4; }
+.info-card p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+.info-card dl { margin: 0; }
+.info-card dt { margin-top: 14px; color: var(--sea); font-weight: 700; }
+.info-card dd { margin: 3px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+@media (max-width: 350px) {
+  body { padding-right: calc(12px + env(safe-area-inset-right, 0px)); padding-left: calc(12px + env(safe-area-inset-left, 0px)); }
+  section { padding: 16px; }
+  .top { padding-right: 19px; padding-left: 19px; }
+  .top h1 { font-size: 27px; }
+  .door .body { padding-right: 16px; padding-left: 16px; }
+  .mini { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .pc { font-size: 16px; }
+  .zoom button { font-size: 13px; }
+  .plist button { grid-template-columns: 28px minmax(0, 1fr); }
+  .plist small { grid-column: 2; text-align: left; }
+  .mgrid { grid-template-columns: repeat(4, 1fr); }
+  .fc button { grid-template-columns: 3.9em minmax(0, 1fr) auto; gap: 6px; }
+  .fc .p { font-size: 16px; }
+  .sched li { gap: 6px; }
+  .strip { gap: 1px; }
+  .acc { font-size: 13px; }
+  .acc th { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
+
+/* Native-app pass: remove the centered web-page frame on phones and use an app shell. */
+html { min-height: 100%; background: var(--bg); }
+body { min-height: 100dvh; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); background: var(--bg); }
+.app { min-height: 100dvh; max-width: 520px; gap: 0; margin: 0 auto; background: var(--bg); }
+.view { gap: 14px; padding: 0 16px 26px; }
+.view:not(#view-home) { padding-bottom: 104px; }
+#view-home { padding-right: 0; padding-bottom: 104px; padding-left: 0; }
+.top { padding: 25px 22px 66px; border: 0; border-radius: 0 0 30px 30px; }
+.top h1 { font-size: 27px; }
+.home-intro { padding: 25px 20px 10px; }
+.home-intro h2 { font-size: 23px; }
+.home-source { margin: 12px 20px 90px; font-size: 13px; }
+.bottom-nav { max-width: 520px; margin: 0 auto; }
+.view:not(#view-home) > .back:first-child { align-self: flex-start; margin: 10px 0 0; padding: 7px 0; border: 0; background: transparent; color: var(--ink); font-size: 15px; font-weight: 700; }
+.view:not(#view-home) > .vt { margin: 0 0 2px; font-size: 25px; letter-spacing: -.04em; }
+section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba(22,45,75,.08); }
+.seg { border-radius: 13px; }
+.map { border-radius: 15px; overflow: hidden; }
+.cta { border-radius: 11px; }
+.notice, .snapshot-banner, .advice { border-radius: 12px; }
+@media (min-width: 521px) {
+  body { padding-top: 20px; padding-bottom: 20px; }
+  .app { min-height: calc(100dvh - 40px); border-radius: 26px; overflow: hidden; box-shadow: 0 12px 45px rgba(21,45,76,.12); }
+  .bottom-nav { border-radius: 0 0 26px 26px; }
+}
+
+
+/* Additions on top of the Manus pass: highlight the tab of the current screen instead of always the first one. */
+.bottom-nav button:first-child{background:transparent;color:var(--muted)}
+.bottom-nav button[aria-current="page"],.bottom-nav button:focus-visible{background:var(--sea-soft);color:var(--sea)}
+.home-data{pointer-events:none}
+.app>header{padding:16px 16px 0}.app>section,.app>.seg,.app>.notice{margin:0 16px}.app{gap:14px;padding-bottom:26px}
+</style>
+
+<div class="app">
+  <header>
+    <div><h1>추자 뱃길 예보</h1><div class="sub">추자도 여객선 결항 확률</div></div>
+    <div class="sub" id="today"></div>
+  </header>
+
+  <div class="notice"><b>실제 운항 기록으로 계산합니다.</b> 한국해양교통안전공단이 공개한 2022년 12월부터 2026년 5월까지의 여객선 운항 기록과, 같은 공단의 운항 스케줄·실시간 풍속 자료를 썼습니다. 여기에 기상청 추자도 해양기상부이의 과거 파고·풍속을 날짜별로 맞붙여 확률을 냅니다.</div>
+
+  <div class="seg" id="ships" role="group" aria-label="여객선 선택"></div>
+
+  <section class="verdict" aria-live="polite">
+    <div class="gauge">
+      <svg viewBox="0 0 200 112" aria-hidden="true">
+        <path d="M14 104 A86 86 0 0 1 186 104" fill="none" stroke="var(--bg)" stroke-width="14" stroke-linecap="round"/>
+        <path id="arc" d="M14 104 A86 86 0 0 1 186 104" fill="none" stroke="var(--ok)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+      </svg>
+      <div class="num"><span id="pct">0</span><small>%</small></div>
+    </div>
+    <div class="label" id="label"></div>
+    <div class="basis" id="basis"></div>
+    <div class="advice" id="advice"></div>
+  </section>
+
+  <section>
+    <h2>바다 상태</h2>
+    <div class="presets" id="presets" role="group" aria-label="바다 상태 예시"></div>
+    <div class="ctl"><label for="wave">유의파고</label><output id="o-wave"></output>
+      <input id="wave" type="range" min="0.1" max="5" step="0.1" value="1"></div>
+    <div class="ctl"><label for="wind">풍속</label><output id="o-wind"></output>
+      <input id="wind" type="range" min="0" max="20" step="0.5" value="5"></div>
+    <div class="hint">추자도 해양기상부이의 오전 10시 관측값 기준입니다.</div>
+  </section>
+
+  <section id="fcsec">
+    <h2 id="fchead">앞으로의 예보와 결항 확률</h2>
+    <ul class="fc" id="fc"></ul>
+    <div class="hint" id="fcnote"></div>
+  </section>
+
+  <section>
+    <h2 id="schead">과거 날짜별 파고·풍속과 운항 결과</h2>
+    <canvas id="scatter" width="840" height="560" role="img" aria-label="과거 날짜별 추자도 파고와 풍속 산점도. 통제된 날과 정상 운항한 날이 색으로 구분됩니다."></canvas>
+    <div class="legend">
+      <span style="--c:var(--dot)">정상 운항한 날</span>
+      <span style="--c:var(--bad)">통제된 날</span>
+      <span style="--c:var(--ink)">지금 조건과 비교 범위</span>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="livehead">오늘 실제 운항 상황</h2>
+    <ul class="sched" id="sched"></ul>
+    <div class="alert" id="alert"><i></i><span></span></div>
+    <div class="wx" id="wx"></div>
+    <div class="hint" id="livenote"></div>
+  </section>
+
+  <section>
+    <h2>월별 통제 발생률 (%)</h2>
+    <div class="months" id="months"></div>
+    <div class="facts" id="facts"></div>
+  </section>
+
+  <section>
+    <h2 id="striphead">기록 마지막 1년, 날짜별 운항</h2>
+    <div class="strip" id="strip" role="img" aria-label="최근 1년 날짜별 운항 기록"></div>
+    <div class="axis" id="axis"></div>
+    <div class="legend">
+      <span style="--c:var(--dot)">정상 운항</span>
+      <span style="--c:var(--warn)">일부 편 통제</span>
+      <span style="--c:var(--bad)">전편 통제</span>
+      <span style="--c:var(--none)">휴항·편성 없음</span>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="acchead">앱 확률과 실제 결과 비교</h2>
+    <table class="acc" id="acc"></table>
+    <div class="hint" id="accnote"></div>
+  </section>
+
+  <section>
+    <h2>확률은 이렇게 계산합니다</h2>
+    <ol class="how">
+      <li>배가 편성된 과거 날짜마다 추자도 해양기상부이의 오전 10시 파고·풍속을 붙였습니다.</li>
+      <li>지금 조건과 파고 ±0.3 m, 풍속 ±1.5 m/s 안에 드는 날을 찾고(25일보다 적으면 가장 가까운 25일), 그중 한 편이라도 통제된 날의 비율을 확률로 보여 줍니다.</li>
+      <li>선박 정비나 운영 사정으로 쉰 날(비운항)과 부이 관측이 빠진 날은 계산에서 뺐습니다.</li>
+      <li>하루 한 시각의 관측값만 썼기 때문에, 오후에 바다가 급변한 날은 반영이 덜 됩니다. 안개로 인한 통제도 파고·풍속으로는 잡히지 않습니다.</li>
+    </ol>
+    <div class="hint">출처: 한국해양교통안전공단 「항로별 여객선 운항상황 현황」(공공데이터포털, 2026-05-31 기준), 「운항 스케줄 정보」 오픈 API, 해양기상 모니터링 시스템, 기상청 API허브 해상 관측자료와 해상예보. 산타모니카는 편에 따라 추자를 들르지 않을 수 있어 출발 전 선사 공지를 확인하세요.</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var D={"ships":[{"key":"santa","name":"산타모니카","route":"진도 ↔ 상추자 ↔ 제주","kind":"쾌속선","first":"2022-12-01","last":"2026-05-31","sail":3634,"ctrl":413,"off":1328,"mon":[[338,88],[212,36],[237,27],[376,26],[390,18],[314,8],[334,16],[348,12],[314,24],[285,28],[186,46],[300,84]],"dayrate":[[86,25],[59,10],[69,10],[112,10],[114,7],[85,3],[88,6],[88,4],[84,7],[79,8],[54,12],[84,24]],"cond":{"y1":[[56,26],[25,7],[12,1],[25,9]],"y0":[[151,27],[247,15],[234,9],[176,16]]},"ym":[["2022-12",114,38],["2023-01",110,30],["2023-02",24,0],["2023-03",83,5],["2023-04",110,10],["2023-05",112,8],["2023-06",108,2],["2023-07",116,4],["2023-08",116,4],["2023-09",112,4],["2023-10",112,4],["2023-11",94,20],["2023-12",98,18],["2024-01",116,30],["2024-02",102,12],["2024-03",66,10],["2024-04",104,0],["2024-05",110,2],["2024-06",106,6],["2024-07",106,6],["2024-08",114,4],["2024-09",102,14],["2024-10",98,10],["2024-11",92,26],["2024-12",88,28],["2025-01",112,28],["2025-02",86,24],["2025-03",58,12],["2025-04",106,10],["2025-05",110,8],["2025-06",100,0],["2025-07",112,6],["2025-08",118,4],["2025-09",100,6],["2025-10",75,14],["2026-03",30,0],["2026-04",56,6],["2026-05",58,0]],"strip":"00000000000000000300000000000000000000002100030000000000000000000000002000000000300000000000000000000000000030000210000000001000000000003000222333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333300300000000000003002000020000032000000000000000000000000003000000000000030000","stripEnd":"2026-05-31","pts":[[1.1,7.0,0],[0.9,6.2,0],[1.8,10.2,1],[1.7,10.4,1],[1.1,9.2,0],[1.1,7.7,0],[0.6,5.4,0],[0.7,7.5,0],[1.8,9.7,1],[0.9,4.6,0],[1.7,8.5,1],[3.2,12.7,1],[1.0,1.9,0],[1.5,9.4,0],[2.1,13.1,1],[4.3,14.9,1],[1.5,5.9,0],[0.5,2.7,0],[2.0,10.7,1],[4.0,15.2,1],[2.4,11.4,1],[1.3,10.0,1],[1.0,7.6,0],[0.7,6.1,0],[1.0,5.9,0],[0.9,7.0,0],[1.0,8.4,0],[0.9,8.0,0],[1.1,8.3,0],[1.5,9.3,0],[0.3,5.5,0],[0.3,0.3,0],[2.5,12.0,1],[0.6,0.2,0],[1.1,4.7,0],[1.1,5.7,0],[0.7,7.8,0],[1.3,10.8,1],[2.6,11.1,1],[2.7,12.4,1],[1.0,6.2,0],[0.7,5.2,0],[1.5,8.8,1],[0.7,3.6,0],[0.7,4.7,0],[1.3,8.4,0],[3.6,16.5,1],[1.8,5.9,0],[0.8,5.8,0],[1.5,10.9,1],[2.0,7.9,1],[1.4,7.3,0],[1.4,7.3,0],[0.4,5.6,0],[1.7,9.6,0],[1.0,7.9,0],[0.8,5.8,0],[0.4,4.4,0],[0.4,3.9,0],[1.0,6.4,0],[0.4,2.9,1],[0.4,4.9,1],[1.8,6.8,0],[0.9,6.1,0],[1.0,2.7,0],[1.9,9.4,0],[1.0,5.8,0],[1.2,6.9,0],[0.6,6.7,0],[0.3,2.3,0],[0.7,7.0,0],[1.1,8.0,0],[0.6,5.0,0],[1.6,7.8,1],[1.2,7.4,0],[1.1,6.7,0],[1.0,8.0,0],[0.3,3.4,0],[0.2,2.8,0],[0.3,4.0,0],[0.6,5.6,0],[1.1,2.0,0],[2.8,10.2,1],[1.7,10.9,0],[1.5,3.3,0],[0.9,7.6,0],[1.0,5.3,0],[0.7,3.0,0],[1.2,8.5,0],[1.3,7.6,0],[0.7,5.6,0],[0.3,1.5,0],[0.4,4.7,0],[1.0,5.5,0],[0.9,8.8,0],[1.0,3.2,0],[0.8,7.5,0],[2.1,10.0,1],[2.8,8.4,1],[1.4,7.1,0],[1.4,9.5,0],[0.6,5.6,0],[0.6,3.1,0],[0.4,2.7,0],[0.5,5.0,0],[0.8,2.4,0],[0.6,3.5,0],[0.4,3.3,0],[1.0,7.2,1],[1.9,10.8,1],[1.3,4.2,0],[2.5,10.8,1],[0.3,3.2,0],[0.3,4.0,0],[0.5,0.5,0],[0.4,1.4,0],[0.4,3.5,0],[1.3,11.0,0],[1.5,3.7,0],[0.9,2.9,0],[0.3,1.3,0],[0.5,5.5,0],[0.6,6.6,0],[0.4,1.1,0],[0.2,2.8,0],[0.3,3.6,0],[0.6,5.4,0],[0.7,6.2,0],[0.5,1.4,0],[1.2,5.5,0],[0.7,3.6,0],[0.7,6.6,0],[0.4,4.0,0],[0.7,7.9,0],[0.4,4.0,0],[0.7,4.2,0],[0.6,6.2,0],[0.5,2.7,0],[0.4,4.0,0],[0.3,0.3,0],[0.3,3.6,0],[0.4,1.8,0],[0.3,2.2,0],[0.4,0.4,0],[0.4,6.1,0],[1.4,8.4,0],[0.8,5.2,0],[0.4,1.4,0],[0.8,7.8,0],[1.5,8.5,1],[1.4,5.5,0],[1.2,5.0,0],[1.3,8.8,0],[1.5,5.0,0],[1.1,2.1,0],[1.1,4.6,0],[0.8,4.5,0],[1.1,6.5,0],[1.1,3.7,0],[0.9,8.0,0],[1.3,4.5,0],[1.2,6.1,0],[1.2,7.0,0],[1.1,6.9,0],[1.4,8.1,0],[1.7,10.0,0],[2.7,11.6,1],[1.9,7.5,0],[1.1,5.9,0],[1.6,5.8,0],[0.5,2.2,0],[0.6,5.6,0],[1.4,10.1,0],[1.4,9.1,0],[1.3,6.7,0],[0.9,5.9,0],[0.6,3.1,0],[1.1,4.7,0],[1.4,6.2,0],[1.6,5.9,0],[1.2,5.1,0],[0.7,4.8,0],[0.6,5.8,0],[0.7,5.5,0],[1.1,7.1,0],[2.3,6.4,0],[1.5,6.5,0],[0.7,5.6,0],[0.9,4.8,0],[1.0,4.9,0],[2.3,13.7,1],[0.8,5.7,0],[0.7,2.8,0],[0.5,3.8,0],[0.7,4.7,0],[0.9,3.1,0],[0.5,2.5,0],[0.6,5.3,0],[0.3,1.6,0],[0.2,1.4,0],[0.6,7.1,0],[1.3,7.2,0],[1.3,9.2,0],[0.8,4.7,0],[0.5,4.9,0],[0.3,2.8,0],[0.3,5.5,0],[1.2,2.2,0],[0.9,7.4,0],[0.6,6.2,0],[0.8,7.7,0],[1.2,3.3,0],[0.6,3.3,0],[0.9,7.5,0],[0.8,3.1,0],[1.1,6.1,0],[1.1,5.1,0],[0.7,2.3,0],[0.5,4.1,0],[0.4,3.0,0],[0.3,4.3,0],[0.6,6.4,0],[0.5,5.0,0],[1.1,4.4,0],[0.4,0.7,0],[0.5,1.4,0],[0.4,3.9,0],[0.2,2.3,0],[1.4,9.3,0],[0.9,5.6,0],[0.8,6.6,0],[2.3,12.0,1],[1.3,9.0,0],[0.5,1.6,0],[0.6,4.2,0],[0.3,4.3,0],[0.4,4.7,0],[0.7,2.9,0],[0.7,8.0,0],[0.8,8.3,0],[1.1,8.7,0],[0.5,4.8,0],[2.0,9.3,1],[1.4,8.4,0],[0.8,4.6,0],[2.4,12.2,0],[1.3,5.7,0],[1.0,6.7,0],[1.0,6.3,0],[0.8,5.8,0],[1.0,4.4,0],[0.6,2.1,0],[0.6,6.4,0],[1.0,6.6,0],[0.4,3.4,0],[1.3,9.5,0],[1.2,3.5,0],[0.7,1.6,0],[0.3,0.8,0],[0.2,2.2,0],[0.3,1.7,0],[0.2,3.5,0],[1.1,10.6,0],[0.7,4.9,0],[0.4,3.8,0],[0.6,5.1,0],[0.2,0.3,0],[0.8,7.2,0],[0.7,4.0,0],[0.7,4.0,0],[0.6,3.7,0],[2.2,9.7,1],[2.4,8.4,0],[2.5,12.3,1],[1.4,10.0,0],[1.9,10.0,0],[0.8,4.8,0],[0.4,6.3,0],[2.7,12.0,1],[3.8,12.5,1],[1.0,7.1,0],[1.0,6.8,0],[0.4,1.9,0],[1.0,4.0,0],[2.6,11.7,1],[1.2,8.9,0],[0.5,3.8,0],[0.8,9.7,0],[1.3,8.3,0],[1.5,9.3,0],[2.0,10.9,0],[0.9,2.8,0],[0.8,6.2,0],[0.4,0.3,0],[0.3,2.9,0],[0.5,4.6,0],[0.3,2.3,0],[3.0,13.2,1],[1.2,2.6,0],[0.5,1.7,0],[1.3,3.3,0],[1.5,6.6,0],[1.0,6.3,0],[1.7,9.0,1],[0.7,3.3,0],[0.5,5.6,0],[1.6,10.1,1],[0.8,6.1,0],[1.1,5.1,0],[0.5,7.1,0],[1.0,8.3,0],[2.2,10.5,1],[1.0,7.9,0],[0.8,5.7,0],[3.1,14.9,1],[3.3,15.8,1],[1.4,7.5,1],[2.9,13.2,1],[2.6,13.4,1],[1.6,8.4,0],[1.0,6.9,0],[0.6,5.2,0],[1.2,7.2,0],[0.5,4.0,0],[0.3,3.2,0],[0.7,7.3,1],[1.3,3.2,0],[0.9,5.2,0],[1.9,8.7,0],[1.5,6.9,1],[2.1,9.4,1],[1.8,5.9,0],[1.6,8.4,0],[1.3,7.9,0],[2.1,11.8,0],[1.6,9.9,0],[1.6,10.3,0],[1.3,4.4,0],[1.7,6.1,0],[0.6,5.1,0],[0.5,2.3,0],[2.0,9.1,0],[0.8,4.9,0],[1.3,8.4,0],[2.4,12.2,1],[2.2,11.5,1],[2.0,10.3,1],[0.9,1.6,0],[0.9,1.9,0],[1.3,7.3,0],[0.9,0.3,0],[0.8,2.0,0],[0.4,0.0,0],[0.7,1.9,0],[1.3,1.6,0],[1.2,3.7,0],[0.6,0.0,0],[0.3,1.5,0],[0.3,5.5,0],[0.6,6.1,0],[1.3,4.8,0],[0.6,2.3,0],[0.5,2.5,0],[0.3,1.9,0],[0.8,3.8,0],[1.2,2.6,0],[0.5,1.6,0],[0.5,1.4,0],[0.3,0.0,0],[1.0,5.6,0],[0.9,1.9,0],[1.2,6.8,0],[2.2,12.1,0],[1.0,6.6,0],[0.5,3.3,0],[0.2,2.2,0],[0.3,3.7,0],[0.3,1.8,0],[1.9,12.1,0],[0.8,6.6,0],[0.9,5.0,0],[0.8,5.4,0],[0.5,3.1,0],[0.6,6.3,0],[0.9,4.7,0],[1.2,7.4,0],[2.0,10.2,0],[0.4,4.1,0],[1.1,6.8,0],[0.8,6.0,0],[0.8,6.1,0],[0.3,1.8,0],[0.2,1.8,1],[1.4,7.6,0],[1.2,9.1,0],[0.8,3.8,0],[0.4,3.3,0],[0.3,2.6,0],[0.4,7.1,0],[1.1,7.7,0],[0.7,6.5,0],[1.2,9.3,0],[1.0,5.0,0],[0.7,3.5,0],[0.8,7.5,0],[0.6,3.3,0],[0.3,3.5,0],[0.3,1.1,0],[0.6,6.7,0],[0.5,2.7,0],[0.2,0.2,0],[0.6,4.1,0],[0.4,2.6,0],[0.6,2.5,0],[0.3,4.3,0],[0.3,1.1,0],[0.3,2.9,0],[0.4,0.5,0],[0.5,4.5,0],[0.5,4.2,0],[0.5,3.9,0],[0.6,2.4,0],[0.3,3.4,0],[1.0,5.3,0],[0.8,8.6,1],[1.5,3.2,0],[1.2,3.7,0],[0.6,4.4,0],[0.5,2.8,0],[0.6,7.7,0],[0.6,6.8,0],[0.7,5.2,0],[2.2,9.0,1],[1.4,2.9,0],[2.0,10.1,1],[1.7,5.0,0],[1.0,5.5,0],[1.4,4.0,0],[1.7,11.0,0],[1.4,9.1,0],[1.5,8.9,0],[1.3,6.0,0],[1.1,0.5,1],[0.6,1.3,0],[0.5,4.3,0],[0.7,3.2,0],[0.8,5.5,0],[0.9,6.6,0],[1.6,10.8,0],[1.2,2.9,0],[1.4,7.9,0],[1.3,4.2,0],[0.9,5.8,0],[0.9,6.7,0],[0.6,3.8,0],[1.8,4.5,0],[3.1,5.7,1],[2.8,6.6,0],[1.8,6.9,0],[1.3,5.9,0],[0.7,5.4,0],[0.8,5.0,0],[1.3,5.6,0],[0.8,4.6,0],[0.6,2.4,0],[0.4,1.9,0],[0.4,5.1,0],[0.3,2.8,0],[0.2,1.4,0],[0.2,1.1,0],[0.3,4.2,0],[0.6,6.6,0],[0.9,6.3,0],[0.9,6.0,0],[0.8,5.7,0],[0.8,5.4,0],[0.6,6.1,0],[0.8,6.9,0],[0.9,7.8,0],[2.1,11.0,0],[1.0,2.9,0],[0.6,1.2,0],[0.3,2.0,0],[0.3,3.6,0],[1.7,8.2,1],[1.4,6.1,0],[0.9,6.3,0],[0.4,1.7,0],[0.4,0.9,0],[0.4,3.5,0],[0.7,4.8,0],[0.4,1.9,0],[0.5,3.6,0],[0.5,3.6,0],[0.4,5.7,0],[1.3,9.4,0],[0.8,7.1,0],[1.0,0.4,0],[0.7,4.1,0],[0.4,3.4,0],[2.3,11.1,0],[1.0,5.3,0],[0.7,5.5,0],[1.0,8.5,1],[1.8,8.9,0],[1.7,8.4,1],[2.3,11.9,1],[1.4,7.2,0],[0.4,5.4,0],[0.8,7.4,0],[0.9,7.3,0],[2.7,11.1,1],[1.5,8.2,0],[0.7,0.6,0],[1.6,8.4,0],[1.4,8.3,0],[1.3,6.4,0],[1.3,7.3,0],[1.3,6.8,0],[0.9,7.7,0],[0.9,5.7,0],[0.7,3.9,0],[1.6,7.0,0],[0.6,6.1,0],[0.5,3.6,0],[0.7,7.3,0],[1.0,7.2,0],[0.5,3.1,0],[1.5,9.1,0],[1.5,6.8,0],[1.0,9.9,1],[3.6,14.4,1],[2.1,10.5,0],[1.1,5.8,0],[1.4,10.1,0],[2.2,11.6,0],[1.6,10.0,1],[1.4,7.1,0],[1.0,7.9,0],[2.2,11.5,0],[1.0,8.0,0],[1.9,10.1,0],[1.4,11.2,1],[2.4,9.3,1],[1.4,7.1,0],[0.6,1.4,0],[1.3,9.2,0],[1.1,8.1,0],[1.0,6.9,0],[1.2,8.2,0],[0.8,7.4,0],[0.7,5.7,0],[0.5,5.3,0],[1.6,8.6,0],[0.8,8.2,0],[1.3,7.2,0],[1.9,10.2,1],[2.5,13.0,1],[1.1,5.9,0],[0.5,2.0,0],[1.2,7.5,0],[0.9,4.3,0],[0.7,3.7,0],[1.5,10.0,0],[3.4,14.1,1],[3.1,7.2,1],[3.1,13.4,1],[1.2,4.9,0],[0.4,4.8,0],[0.7,4.2,0],[1.1,7.1,0],[0.6,6.5,0],[1.3,9.8,0],[1.2,5.7,0],[0.6,2.1,0],[2.7,11.1,1],[1.1,6.3,0],[0.8,6.5,0],[0.8,7.6,0],[0.8,5.3,0],[2.3,10.5,1],[1.9,11.0,1],[0.6,4.5,0],[1.9,10.0,0],[0.6,2.4,0],[2.5,12.5,1],[2.7,11.7,1],[1.0,5.5,0],[1.2,6.0,0],[0.5,2.4,0],[2.7,11.0,1],[1.3,9.2,0],[0.7,3.4,0],[1.4,8.7,0],[0.9,5.2,0],[0.8,7.5,0],[2.3,10.6,1],[1.8,6.7,1],[2.3,12.3,1],[2.1,9.4,0],[1.3,7.1,0],[1.0,7.0,0],[0.9,4.3,0],[1.1,4.1,0],[1.8,10.5,1],[1.2,8.6,0],[1.1,5.7,0],[0.4,2.7,0],[0.2,2.7,0],[0.6,3.3,0],[0.4,3.5,0],[0.4,5.6,0],[0.8,5.4,0],[1.4,8.3,0],[1.8,7.3,0],[2.8,13.5,1],[3.2,12.4,1],[2.4,10.3,1],[0.6,1.1,0],[0.6,6.0,0],[2.5,16.4,1],[1.3,8.2,0],[3.1,12.9,1],[1.7,9.0,0],[3.5,16.2,1],[1.4,8.1,0],[0.7,6.7,0],[0.3,6.2,0],[1.2,8.0,0],[1.7,6.5,0],[0.6,1.3,0],[0.3,2.0,0],[0.2,3.6,0],[2.0,10.2,1],[1.8,10.2,1],[2.0,10.9,0],[1.3,9.0,0],[1.3,8.9,0],[1.2,7.9,0],[1.5,9.9,0],[2.0,10.7,0],[0.5,2.9,0],[0.9,4.9,0],[0.3,4.6,0],[0.6,2.3,0],[0.5,3.2,0],[0.8,3.5,0],[3.9,15.6,1],[4.1,15.8,1],[1.1,7.6,0],[2.2,7.4,0],[1.2,7.6,0],[1.1,4.3,0],[0.9,5.9,0],[0.8,6.1,0],[0.6,2.5,0],[1.7,4.9,0],[2.0,11.3,1],[1.0,6.8,0],[0.8,4.4,0],[0.5,1.1,0],[0.6,6.4,0],[1.0,5.1,0],[0.4,2.0,0],[1.3,6.9,0],[0.5,3.5,0],[0.3,4.0,0],[1.2,3.5,0],[0.4,5.1,0],[0.4,5.3,1],[0.4,0.4,0],[1.0,2.8,0],[1.9,12.3,1],[2.2,7.5,1],[1.6,3.8,0],[1.9,11.0,0],[1.2,7.1,0],[0.9,5.9,0],[0.6,4.6,0],[1.3,8.5,0],[1.0,9.7,0],[1.0,4.4,0],[0.5,1.9,0],[0.6,3.9,0],[0.2,0.5,0],[0.2,0.1,0],[0.3,4.8,0],[0.6,4.2,0],[0.5,3.0,0],[1.3,11.3,0],[0.7,5.3,0],[1.9,12.7,0],[0.7,2.2,0],[0.9,2.4,0],[0.4,4.0,0],[1.9,11.8,1],[1.1,4.4,0],[0.5,3.8,0],[0.6,3.3,0],[1.1,7.5,1],[0.5,5.3,0],[0.8,6.9,0],[0.6,5.4,0],[0.6,2.8,0],[0.8,0.9,1],[1.7,3.0,0],[0.9,3.4,0],[0.4,1.7,0],[0.3,1.1,0],[0.2,2.0,0],[0.3,6.2,0],[0.3,1.9,0],[0.4,3.4,0],[0.2,0.9,0],[0.6,7.5,0],[1.0,6.7,0],[0.6,6.7,0],[0.4,0.3,0],[0.4,4.5,0],[0.4,2.3,0],[0.4,2.8,0],[0.4,3.3,0],[0.5,1.7,0],[0.3,4.1,0],[0.3,0.8,0],[0.7,8.2,0],[1.2,5.4,0],[1.7,2.7,0],[1.3,4.2,0],[1.3,7.9,0],[0.7,2.1,0],[1.3,9.6,0],[1.8,9.7,0],[0.9,4.8,0],[0.5,4.1,0],[1.1,5.4,0],[0.8,5.9,0],[0.5,3.8,0],[0.3,3.6,0],[0.4,4.2,0],[0.4,2.3,0],[0.5,4.9,0],[0.5,5.6,0],[0.5,4.1,0],[0.5,5.0,0],[0.8,4.5,0],[0.5,0.2,0],[0.6,8.2,0],[1.9,12.0,0],[1.5,10.2,0],[2.7,9.7,1],[1.7,9.6,1],[0.7,4.6,0],[0.5,4.8,0],[0.9,2.6,0],[1.5,9.2,0],[0.9,5.7,0],[1.2,8.9,0],[0.9,4.7,0],[1.3,5.2,0],[1.2,4.9,0],[0.9,5.1,0],[0.5,4.8,0],[0.7,7.8,0],[1.2,10.5,0],[1.4,11.4,0],[0.8,6.9,0],[0.7,7.3,0],[1.1,10.1,0],[1.6,8.6,0],[0.9,6.1,0],[0.8,1.9,0],[0.9,8.8,0],[1.5,6.8,0],[1.2,7.1,0],[1.8,10.5,0],[1.9,4.2,0],[1.1,2.1,0],[1.0,5.4,0],[2.0,11.5,1],[1.1,5.4,0],[1.4,8.3,0],[1.2,8.2,0],[0.8,4.7,0],[0.5,0.4,0],[0.4,2.1,0],[0.4,3.4,0],[0.5,4.2,0],[0.5,5.2,0],[0.4,2.5,0],[0.8,3.2,0],[0.9,1.8,0],[0.8,3.4,0],[1.2,5.9,0],[0.5,0.8,0],[0.3,4.5,0],[0.5,2.5,0],[0.3,3.0,0],[0.5,1.4,0],[0.7,3.6,0],[0.5,4.3,0],[0.3,3.6,0],[0.6,2.0,0],[0.7,5.8,0],[1.1,3.0,0],[0.5,3.5,0],[1.0,7.2,0],[0.8,5.9,0],[1.2,9.3,0],[1.9,11.5,0],[2.1,8.7,0],[0.7,3.4,0],[0.6,7.6,0],[0.5,3.2,0],[0.8,6.6,0],[2.2,12.0,0],[1.6,7.6,0],[0.8,6.3,0],[2.6,11.8,1],[2.0,10.1,1],[1.6,5.7,0],[1.2,3.5,0],[0.8,3.5,0],[0.5,10.1,0],[0.7,6.8,0],[0.8,6.5,0],[0.4,1.4,0],[0.4,3.0,0],[0.3,2.2,0],[2.6,4.5,1],[1.3,6.0,0],[0.5,3.8,0],[0.5,2.8,0],[0.7,6.4,0],[1.0,7.3,0],[1.7,7.8,0],[2.2,10.2,0],[1.0,5.7,0],[0.3,3.1,0],[0.4,3.2,0],[0.8,5.8,0],[1.1,6.5,0],[2.6,14.1,0],[1.5,9.8,0],[2.1,9.4,1],[2.1,9.2,1],[2.1,9.4,1],[0.7,3.9,0],[0.4,3.8,0],[1.2,6.3,0],[0.5,4.5,0],[0.3,4.1,0],[0.3,3.1,0],[0.5,6.0,0],[1.5,10.2,0],[0.9,5.6,0],[0.7,4.1,0],[0.2,0.8,0],[0.5,3.8,0],[0.3,4.3,0],[0.9,7.9,0],[1.4,8.0,0],[0.3,1.7,0],[0.3,2.6,0],[1.7,7.7,1],[1.1,3.3,0],[1.4,7.9,0],[1.1,9.2,0],[0.5,1.2,0],[1.0,5.3,0],[0.9,1.9,0],[0.5,3.2,0],[1.1,8.0,0],[2.0,10.1,1],[1.6,8.4,0],[1.6,12.7,0],[0.9,7.1,0],[0.5,3.9,0],[1.0,5.0,0],[0.5,5.6,0],[1.0,7.5,0],[1.1,4.0,0],[1.0,2.7,0],[0.5,1.4,0],[0.3,2.8,0],[0.7,5.7,0],[0.4,3.7,0],[0.3,5.2,0],[1.0,5.2,0],[0.6,1.7,0],[1.4,7.0,0],[1.8,5.1,0],[0.5,1.4,0],[0.6,2.5,0],[0.3,2.8,0],[0.9,7.7,0],[0.4,3.6,0],[0.3,2.0,0],[0.4,4.1,0],[0.5,10.8,0],[0.3,1.4,0],[1.7,10.6,0],[0.5,2.0,0],[0.3,1.6,0],[0.3,0.6,0],[0.6,2.3,0],[0.8,4.1,0],[0.7,6.5,0],[0.8,8.8,0],[1.3,9.1,0],[1.2,10.1,0],[1.3,7.4,0],[1.5,11.9,0],[0.9,4.8,0],[0.6,5.0,0],[0.3,2.7,0],[0.2,0.8,0]]},{"key":"songlim","name":"송림블루오션","route":"제주 ↔ 추자 ↔ 완도","kind":"카페리","first":"2022-12-01","last":"2026-05-31","sail":1631,"ctrl":207,"off":359,"mon":[[156,40],[113,32],[157,17],[150,18],[197,11],[150,6],[135,17],[102,1],[100,8],[119,17],[114,18],[138,22]],"dayrate":[[78,20],[58,16],[78,9],[77,10],[99,6],[76,3],[70,10],[52,1],[50,5],[57,9],[54,8],[60,10]],"cond":{"y1":[[42,18],[19,6],[12,4],[21,7]],"y0":[[124,18],[203,12],[162,7],[124,11]]},"ym":[["2022-12",24,6],["2023-01",42,12],["2023-02",46,12],["2023-03",52,8],["2023-04",46,14],["2023-05",52,6],["2023-06",44,4],["2023-07",26,9],["2024-05",28,0],["2024-06",52,2],["2024-07",54,4],["2024-08",55,1],["2024-09",52,4],["2024-10",58,8],["2024-11",52,8],["2024-12",44,4],["2025-01",60,16],["2025-02",29,12],["2025-03",59,9],["2025-04",50,2],["2025-05",59,5],["2025-06",54,0],["2025-07",55,4],["2025-08",47,0],["2025-09",48,4],["2025-10",61,9],["2025-11",62,10],["2025-12",70,12],["2026-01",54,12],["2026-02",38,8],["2026-03",46,0],["2026-04",54,2],["2026-05",58,0]],"strip":"00000000000300000000300003000000000000032100000000000300200000000333333000000000000000003000000000000033300000330220300000002000003000000332021000002000002000000000030002200000020300000200000003032000300200322000033200000302200020003232000000000030002220003000200000333333333333330000000000000000003000000002000030000003000000300000000000000000000300000000000003000","stripEnd":"2026-05-31","pts":[[1.5,5.9,0],[0.5,2.7,0],[1.3,5.3,0],[2.0,10.7,1],[4.0,15.2,1],[2.4,11.4,1],[1.0,7.6,0],[0.7,6.1,0],[1.0,7.7,0],[1.0,5.9,0],[0.9,7.0,0],[1.0,8.4,0],[0.9,8.0,0],[1.1,8.3,0],[1.5,9.3,0],[0.6,4.7,0],[0.3,0.3,0],[2.5,12.0,1],[0.6,0.2,0],[1.1,4.7,0],[1.1,5.7,0],[0.6,4.3,0],[2.6,11.1,1],[2.7,12.4,1],[1.0,6.2,0],[0.6,5.0,0],[0.7,5.2,0],[1.5,8.8,1],[2.0,7.9,1],[1.4,7.3,0],[1.4,7.3,0],[0.4,5.6,0],[0.9,7.7,0],[1.0,7.9,0],[0.8,5.8,0],[0.4,4.4,0],[0.4,3.9,0],[1.0,6.4,0],[1.0,8.1,0],[1.5,6.2,1],[0.6,5.6,0],[0.7,7.9,0],[1.8,8.3,1],[1.2,4.3,0],[0.4,2.4,0],[0.6,4.0,0],[1.4,11.7,1],[1.2,9.1,1],[1.4,10.6,1],[0.7,3.3,0],[1.3,9.1,0],[2.1,11.5,1],[1.4,9.2,0],[0.5,0.9,0],[0.5,4.9,0],[0.5,2.4,0],[0.6,3.6,0],[0.3,2.2,0],[0.9,6.7,0],[0.5,1.6,0],[0.4,2.9,1],[0.4,4.9,1],[1.8,6.8,1],[0.9,6.1,0],[1.0,2.7,0],[1.0,5.8,0],[1.2,6.9,0],[0.6,6.7,0],[0.3,2.3,0],[0.7,7.0,0],[1.1,8.0,0],[1.6,7.8,1],[1.2,7.4,0],[1.1,6.7,0],[1.0,8.0,0],[0.3,3.4,0],[0.2,2.8,0],[0.6,5.6,0],[1.1,2.0,0],[2.8,10.2,1],[2.5,11.5,1],[0.9,7.6,0],[1.0,5.3,0],[0.7,3.0,0],[1.2,8.5,0],[0.7,5.6,0],[0.4,4.7,0],[1.0,5.5,0],[0.9,8.8,1],[2.1,10.0,1],[2.8,8.4,1],[1.4,7.1,0],[1.4,9.5,0],[0.6,5.6,0],[0.4,2.7,0],[0.5,5.0,0],[0.8,2.4,0],[0.6,3.5,0],[0.4,3.3,0],[0.7,7.0,0],[1.9,10.8,1],[2.5,10.8,1],[0.3,3.2,0],[0.5,0.5,0],[0.4,1.4,0],[0.4,3.5,0],[1.5,3.7,0],[0.9,2.9,0],[0.3,1.3,0],[0.5,5.5,0],[0.6,6.6,0],[0.4,1.1,0],[0.3,3.6,0],[0.6,5.4,0],[0.7,6.2,0],[0.5,1.4,0],[0.7,3.6,0],[0.7,6.6,0],[0.4,4.0,0],[0.7,7.9,0],[0.4,4.0,0],[0.7,4.2,0],[0.6,6.2,0],[0.5,2.7,0],[0.4,4.0,0],[0.3,0.3,0],[0.4,1.8,0],[0.3,2.2,0],[0.4,0.4,0],[0.4,6.1,0],[1.0,5.4,0],[0.4,1.4,0],[0.8,7.8,0],[1.5,8.5,1],[1.2,5.0,0],[1.1,2.1,0],[1.1,4.6,0],[0.8,4.5,0],[1.1,6.5,1],[1.3,5.5,0],[0.9,8.0,1],[1.3,4.5,0],[1.2,6.1,1],[1.2,7.0,0],[1.1,6.9,0],[2.7,11.6,1],[1.9,7.5,1],[1.1,5.9,0],[0.3,1.8,0],[0.2,1.8,0],[1.2,9.1,0],[0.8,3.8,0],[0.4,3.3,0],[0.3,2.6,0],[0.4,7.1,0],[1.2,9.3,0],[1.0,5.0,0],[0.7,3.5,0],[0.8,7.5,0],[0.6,3.3,0],[0.3,3.5,0],[0.3,1.1,0],[0.6,6.7,0],[0.5,2.7,0],[0.2,0.2,0],[0.7,6.1,0],[0.6,4.1,0],[0.4,2.6,0],[0.6,2.5,0],[0.3,4.3,0],[0.3,1.1,0],[0.3,2.9,1],[0.5,4.5,0],[0.5,4.2,0],[0.5,3.9,0],[0.6,2.4,0],[0.3,3.4,0],[0.4,1.3,0],[1.0,5.3,0],[1.5,3.2,0],[1.2,3.7,0],[0.6,4.4,0],[0.5,2.8,0],[0.6,7.7,0],[0.6,6.8,0],[0.7,5.2,0],[2.2,9.0,0],[1.4,2.9,0],[1.7,5.0,0],[1.4,4.0,0],[1.7,11.0,0],[1.4,9.1,0],[1.5,8.9,0],[1.3,6.0,0],[1.8,7.3,0],[1.1,0.5,0],[0.6,1.3,0],[0.5,4.3,0],[0.7,3.2,0],[0.8,5.5,0],[0.9,6.6,0],[1.2,8.0,0],[1.2,2.9,0],[1.4,7.9,0],[1.3,4.2,0],[0.9,5.8,0],[0.9,6.7,0],[0.6,3.8,0],[1.8,4.5,0],[3.1,5.7,1],[2.8,6.6,1],[1.8,6.9,0],[1.3,5.9,0],[0.7,5.4,0],[0.8,5.0,0],[1.3,5.6,0],[0.8,4.6,0],[0.6,2.4,0],[0.4,1.9,0],[0.4,5.1,0],[0.3,2.8,0],[0.2,1.4,0],[0.2,1.1,0],[0.3,4.2,0],[0.6,6.6,0],[0.9,6.3,0],[0.9,6.0,0],[0.8,5.7,0],[0.8,5.4,0],[0.6,6.1,0],[0.8,6.9,0],[0.9,7.8,0],[1.7,8.2,0],[1.0,2.9,0],[0.6,1.2,0],[0.3,2.0,0],[0.3,3.6,0],[1.4,6.1,0],[0.9,6.3,0],[0.4,1.7,0],[0.4,0.9,0],[0.4,3.5,0],[1.4,8.6,0],[0.7,4.8,0],[0.4,1.9,0],[0.5,3.6,0],[0.5,3.6,0],[0.4,5.7,0],[1.3,9.4,0],[0.8,7.1,0],[0.7,4.1,0],[0.4,3.4,0],[2.3,11.1,1],[1.0,5.3,0],[0.7,5.5,0],[1.0,8.5,0],[1.8,8.9,0],[1.7,8.4,0],[2.3,11.9,1],[1.4,7.2,0],[1.1,8.0,0],[0.8,7.4,0],[0.9,7.3,0],[1.5,8.2,0],[0.7,0.6,0],[1.6,8.4,0],[1.4,8.3,0],[1.3,6.4,0],[1.3,7.3,0],[1.3,6.8,0],[0.9,7.7,0],[0.9,5.7,0],[0.7,3.9,0],[1.6,7.0,0],[0.6,6.1,0],[0.5,3.6,0],[0.7,7.3,0],[1.0,7.2,0],[0.5,3.1,0],[0.9,9.3,0],[1.5,9.1,0],[1.5,6.8,0],[1.0,9.9,1],[3.6,14.4,1],[2.1,10.5,0],[1.1,5.8,0],[2.9,10.7,1],[2.2,11.6,1],[1.6,10.0,0],[1.4,7.1,0],[1.0,7.9,0],[2.2,11.5,0],[1.0,8.0,0],[1.4,11.2,1],[2.4,9.3,0],[1.4,7.1,0],[0.6,1.4,0],[1.3,9.2,0],[1.2,8.8,0],[1.1,8.1,0],[1.0,6.9,0],[1.2,8.2,0],[0.8,7.4,0],[0.7,5.7,0],[0.5,5.3,0],[0.8,8.2,0],[1.3,7.2,0],[1.1,5.9,0],[0.5,2.0,0],[1.2,7.5,0],[0.9,4.3,0],[0.7,3.7,0],[1.5,10.0,0],[2.7,12.6,1],[3.1,7.2,1],[3.1,13.4,1],[1.2,4.9,0],[0.4,4.8,0],[0.7,4.2,0],[1.1,7.1,0],[0.6,6.5,0],[1.3,9.8,0],[1.2,5.7,0],[0.6,2.1,0],[1.1,6.3,0],[0.8,6.5,0],[0.8,7.6,0],[0.8,5.3,0],[0.6,4.5,0],[1.9,10.0,0],[0.6,2.4,0],[2.5,12.5,1],[2.7,11.7,1],[1.0,5.5,0],[1.2,6.0,0],[0.5,2.4,0],[1.3,9.2,0],[0.7,3.4,0],[0.4,4.0,0],[1.4,8.7,0],[0.9,5.2,0],[0.8,7.5,0],[1.8,11.3,1],[2.3,10.6,1],[1.8,6.7,1],[2.3,12.3,1],[2.1,9.4,0],[1.3,7.1,0],[1.0,7.0,0],[0.9,4.3,0],[1.1,4.1,0],[1.8,10.5,1],[1.2,8.6,0],[1.1,5.7,0],[0.4,2.7,0],[0.2,2.7,0],[0.6,3.3,0],[0.4,3.5,0],[0.8,5.4,0],[1.4,8.3,0],[1.8,7.3,0],[2.8,13.5,1],[3.2,12.4,1],[2.4,10.3,1],[0.6,1.1,0],[0.6,6.0,0],[2.5,16.4,1],[1.3,8.2,0],[2.7,12.9,1],[3.1,12.9,1],[2.8,12.9,1],[1.7,9.0,0],[3.5,16.2,1],[1.4,8.1,0],[1.3,8.9,0],[1.2,7.9,0],[1.5,9.9,0],[2.0,10.7,0],[0.5,2.9,0],[0.9,4.9,0],[0.6,2.3,0],[0.5,3.2,0],[0.8,3.5,0],[3.9,15.6,1],[0.9,5.2,0],[1.4,8.8,0],[1.0,4.0,0],[0.6,5.5,0],[0.7,7.3,0],[0.5,5.6,0],[0.4,2.4,0],[0.8,8.9,0],[1.2,7.7,0],[3.4,16.1,1],[2.0,10.8,1],[2.2,9.5,0],[2.2,10.8,1],[1.4,7.0,0],[1.1,7.6,0],[2.2,7.4,0],[1.2,7.6,0],[1.1,4.3,0],[0.9,5.9,0],[0.8,6.1,0],[0.6,2.5,0],[2.0,11.3,1],[1.0,6.8,0],[0.8,4.4,0],[0.5,1.1,0],[0.6,6.4,0],[0.6,2.9,0],[1.0,5.1,0],[0.4,2.0,0],[1.3,6.9,0],[0.5,3.5,0],[0.3,4.0,0],[1.2,3.5,0],[0.4,5.1,0],[0.4,0.4,0],[1.0,2.8,0],[1.9,12.3,1],[2.2,7.5,1],[1.6,3.8,0],[1.2,7.1,0],[0.9,5.9,0],[0.6,4.6,0],[1.3,8.5,0],[1.0,9.7,0],[1.0,4.4,0],[0.6,3.9,0],[0.2,0.5,0],[0.2,0.1,0],[0.3,4.8,0],[0.6,4.2,0],[0.5,3.0,0],[1.3,11.3,0],[0.7,5.3,0],[1.9,12.7,1],[0.7,2.2,0],[0.9,2.4,0],[0.4,4.0,0],[0.3,3.1,0],[1.9,11.8,1],[1.1,4.4,0],[0.5,3.8,0],[0.6,3.3,0],[1.1,7.5,0],[0.5,5.3,0],[0.8,6.9,0],[0.6,5.4,0],[0.6,2.8,0],[0.8,7.5,0],[1.7,3.0,0],[0.9,3.4,0],[0.4,1.7,0],[0.3,1.1,0],[0.2,2.0,0],[0.3,6.2,0],[0.3,1.9,0],[0.4,3.4,0],[0.2,0.9,0],[0.6,7.5,0],[1.0,6.7,0],[0.6,6.7,0],[0.4,0.3,0],[0.4,4.5,0],[0.4,2.3,0],[0.4,2.8,0],[0.4,3.3,0],[0.5,1.7,0],[0.3,4.1,0],[0.7,8.2,0],[1.2,5.4,0],[1.7,2.7,0],[1.3,4.2,0],[1.3,7.9,0],[0.7,3.3,0],[0.7,2.1,0],[1.3,9.6,0],[0.9,4.8,0],[0.5,4.1,0],[1.1,5.4,0],[0.8,5.9,0],[0.3,3.6,0],[0.4,4.2,0],[0.4,2.3,0],[0.5,4.9,0],[0.5,5.6,0],[0.5,4.1,0],[0.5,5.0,0],[0.8,4.5,0],[0.5,0.2,0],[0.6,8.2,0],[1.9,12.0,0],[2.7,9.7,1],[1.7,9.6,1],[0.7,4.6,0],[0.5,4.8,0],[0.9,2.6,0],[1.0,9.5,0],[1.5,9.2,0],[0.9,5.7,0],[1.2,8.9,0],[0.9,4.7,0],[1.3,5.2,0],[1.2,4.9,0],[0.9,5.1,0],[0.7,7.8,0],[1.2,10.5,0],[1.4,11.4,1],[0.8,6.9,0],[0.7,7.3,0],[1.1,10.1,0],[1.6,8.6,0],[0.9,6.1,0],[0.8,1.9,0],[0.9,8.8,0],[1.5,6.8,0],[1.1,5.4,0],[1.4,8.3,0],[1.2,8.2,0],[0.8,4.7,0],[0.5,0.4,0],[0.4,2.1,0],[0.4,3.4,0],[0.5,4.2,0],[0.5,3.4,0],[0.5,5.2,0],[0.4,2.5,0],[0.8,3.2,0],[0.9,1.8,0],[0.8,3.4,0],[1.2,5.9,0],[0.5,0.8,0],[0.5,2.5,0],[0.3,3.0,0],[0.5,1.4,0],[0.7,3.6,0],[0.5,4.3,0],[0.3,3.6,0],[0.6,2.0,0],[0.7,5.8,0],[1.1,3.0,0],[0.5,3.5,0],[1.0,7.2,0],[0.8,5.9,0],[0.7,3.4,0],[0.6,7.6,0],[0.5,3.2,0],[1.2,8.1,0],[0.8,6.6,0],[0.8,6.3,0],[2.6,11.8,1],[2.0,10.1,1],[1.6,5.7,0],[0.8,3.5,0],[0.5,10.1,0],[0.7,6.8,0],[0.8,6.5,0],[0.4,1.4,0],[0.4,3.0,0],[0.3,2.2,0],[2.6,4.5,1],[1.3,6.0,0],[0.5,3.8,0],[0.5,2.8,0],[0.7,6.4,0],[1.0,7.3,0],[2.2,10.2,0],[1.0,5.7,0],[0.3,3.1,0],[0.4,3.2,0],[0.8,5.8,0],[2.2,10.7,0],[1.5,9.8,1],[2.1,9.4,0],[2.1,9.2,1],[2.1,9.4,1],[1.7,9.3,0],[1.9,7.7,0],[1.2,7.0,0],[1.2,7.9,0],[1.4,8.3,0],[1.1,8.5,0],[1.4,8.2,0],[0.7,5.6,0],[1.8,10.2,0],[1.2,9.2,1],[1.2,7.8,0],[1.0,5.7,0],[0.8,7.1,0],[0.9,3.8,0],[1.1,8.7,0],[1.7,12.4,0],[1.2,9.2,0],[1.6,8.6,0],[1.4,10.7,0],[1.1,7.3,0],[1.5,8.7,0],[0.8,7.5,0],[0.5,5.7,0],[1.8,11.5,1],[1.5,5.0,0],[0.7,6.2,0],[0.8,5.8,0],[0.4,2.9,0],[0.2,1.1,0],[0.6,3.7,0],[2.3,12.3,1],[1.3,4.7,0],[2.1,5.5,0],[0.4,5.1,0],[1.2,5.8,0],[1.1,7.1,0],[1.3,9.3,0],[2.0,11.6,1],[1.1,8.4,0],[1.5,8.3,0],[0.4,2.0,0],[1.5,8.2,0],[0.8,5.1,0],[1.6,6.9,0],[3.5,13.0,1],[0.7,3.5,0],[1.2,9.8,0],[0.8,4.5,0],[0.6,3.3,0],[2.4,11.6,1],[1.1,4.1,0],[1.3,7.0,0],[2.6,13.3,1],[0.7,3.5,0],[0.4,1.6,0],[1.2,5.9,0],[1.2,7.9,0],[2.8,13.7,1],[1.7,10.2,0],[0.7,6.9,0],[1.1,9.1,0],[1.1,4.5,0],[1.8,10.0,0],[0.6,2.3,0],[3.8,13.8,1],[1.2,4.4,0],[1.9,7.4,0],[3.0,8.1,1],[0.5,5.6,0],[0.6,4.7,0],[2.3,10.9,1],[0.6,2.4,0],[0.5,3.2,0],[0.5,4.9,0],[1.8,9.6,1],[1.4,7.0,0],[1.0,7.9,0],[0.8,4.7,0],[0.5,4.1,0],[1.5,10.1,0],[0.9,5.2,0],[1.1,7.8,0],[1.0,4.4,0],[0.4,3.5,0],[1.3,7.6,0],[1.0,4.0,0],[0.6,3.8,0],[0.7,3.9,0],[0.4,3.8,0],[0.9,2.2,0],[1.2,6.3,0],[0.5,4.5,0],[0.3,4.1,0],[0.3,3.1,0],[0.5,6.0,0],[1.5,10.2,0],[0.9,5.6,0],[0.2,0.8,0],[0.5,3.8,0],[0.3,4.3,0],[0.9,7.9,0],[1.4,8.0,0],[0.7,2.4,0],[0.3,1.7,0],[0.3,2.6,0],[1.7,7.7,1],[1.1,3.3,0],[1.4,7.9,0],[1.1,9.2,0],[0.5,1.2,0],[1.0,5.3,0],[0.9,1.9,0],[0.5,3.2,0],[1.1,8.0,0],[1.0,2.6,0],[1.6,8.4,0],[1.6,12.7,0],[0.9,7.1,0],[0.5,3.9,0],[1.0,5.0,0],[0.5,5.6,0],[1.1,4.0,0],[1.0,2.7,0],[0.5,1.4,0],[0.3,2.8,0],[0.7,5.7,0],[0.4,3.7,0],[0.3,5.2,0],[1.0,5.2,0],[0.6,1.7,0],[1.4,7.0,0],[1.8,5.1,0],[0.5,1.4,0],[0.6,2.5,0],[0.3,2.8,0],[0.9,7.7,0],[0.4,3.6,0],[0.3,2.0,0],[0.4,4.1,0],[0.5,10.8,0],[1.7,10.6,0],[0.5,2.0,0],[0.3,1.6,0],[0.3,0.6,0],[0.6,2.3,0],[0.8,4.1,0],[0.7,6.5,0],[0.8,8.8,0],[1.3,9.1,0],[1.2,10.1,0],[1.3,7.4,0],[1.5,11.9,0],[1.2,9.5,0],[0.6,5.0,0],[0.3,2.7,0],[0.2,0.8,0]]},{"key":"queen","name":"퀸스타2호","route":"제주 ↔ 추자 ↔ 우수영","kind":"쾌속선","first":"2022-12-01","last":"2024-04-07","sail":824,"ctrl":178,"off":170,"mon":[[120,42],[92,25],[110,26],[52,10],[52,6],[58,8],[60,6],[58,6],[37,3],[64,8],[54,16],[67,22]],"dayrate":[[61,21],[51,15],[57,15],[31,8],[28,4],[29,4],[30,3],[30,3],[21,2],[30,4],[27,8],[34,11]],"cond":{"y1":[[45,19],[25,13],[10,5],[13,2]],"y0":[[91,24],[80,11],[76,3],[60,9]]},"ym":[["2022-12",11,0],["2023-01",60,20],["2023-02",51,11],["2023-03",59,10],["2023-04",41,9],["2023-05",52,6],["2023-06",58,8],["2023-07",60,6],["2023-08",58,6],["2023-09",37,3],["2023-10",64,8],["2023-11",54,16],["2023-12",56,22],["2024-01",60,22],["2024-02",41,14],["2024-03",51,16],["2024-04",11,1]],"strip":"00030002023002233330000003212003000000020000030000000000000000000000000000000220322000000000003222000000000000000000020000220000000000003000000000000333333333000000020020000000000200200300000000200000020000000002203200200322000032000002200003020022032220022200000300200200020020002200022022220000002303200000000330002022320021220012000000300000032021222002300020000","stripEnd":"2024-04-07","pts":[[1.0,7.6,0],[0.7,6.1,0],[1.0,7.7,0],[1.0,5.9,0],[0.9,7.0,0],[1.0,8.4,0],[0.9,8.0,0],[1.1,8.3,0],[1.5,9.3,1],[0.6,4.7,0],[0.3,5.5,0],[0.3,0.3,0],[2.5,12.0,1],[0.6,0.2,0],[1.1,4.7,0],[1.1,5.7,0],[0.7,7.8,0],[1.3,10.8,1],[2.6,11.1,1],[2.7,12.4,1],[1.0,6.2,0],[0.6,5.0,0],[0.7,5.2,0],[1.5,8.8,1],[0.7,3.6,0],[0.7,4.7,0],[1.3,8.4,0],[3.6,16.5,1],[1.8,5.9,0],[0.8,5.8,0],[1.5,10.9,1],[2.0,7.9,1],[1.4,7.3,0],[1.4,7.3,0],[0.4,5.6,0],[0.9,7.7,0],[1.7,9.6,0],[1.0,7.9,0],[0.8,5.8,0],[0.4,4.4,0],[0.4,3.9,0],[1.0,6.4,0],[0.9,7.0,1],[1.5,6.2,0],[0.6,5.6,0],[0.7,7.9,0],[1.3,7.3,0],[1.8,8.3,1],[1.2,4.3,0],[1.0,4.3,0],[0.4,2.4,0],[0.6,4.0,0],[1.4,11.7,1],[1.2,9.1,0],[1.4,10.6,1],[0.7,3.3,0],[0.7,5.5,0],[1.3,9.1,1],[2.1,11.5,1],[1.4,9.2,0],[0.5,0.9,0],[0.5,4.9,0],[0.5,2.4,0],[1.6,9.7,1],[0.6,3.6,0],[0.3,2.2,0],[1.3,4.4,0],[0.5,1.6,0],[0.4,2.9,0],[0.4,4.9,1],[1.8,6.8,1],[0.9,6.1,0],[1.0,2.7,0],[1.9,9.4,0],[1.0,5.8,0],[1.2,6.9,0],[0.6,6.7,0],[0.3,2.3,0],[0.7,7.0,0],[0.6,5.0,1],[1.6,7.8,1],[1.2,7.4,0],[1.1,6.7,0],[1.0,8.0,0],[0.3,3.4,0],[0.2,2.8,0],[0.3,4.0,0],[0.6,5.6,0],[1.1,2.0,0],[2.8,10.2,1],[1.7,10.9,1],[2.5,11.5,1],[1.5,3.3,0],[0.9,7.6,0],[1.0,5.3,0],[0.7,3.0,0],[1.2,8.5,0],[1.3,7.6,0],[0.3,1.5,0],[0.4,4.7,0],[1.0,5.5,0],[0.9,8.8,1],[1.0,3.2,0],[0.8,7.5,0],[2.1,10.0,1],[2.8,8.4,1],[0.4,2.7,0],[0.5,5.0,0],[0.8,2.4,0],[0.6,3.5,0],[0.4,3.3,0],[0.7,7.0,0],[1.9,10.8,1],[1.3,4.2,1],[2.5,10.8,1],[0.3,4.0,0],[0.5,0.5,0],[0.4,1.4,0],[0.4,3.5,0],[1.3,11.0,1],[1.5,3.7,0],[0.9,2.9,0],[0.3,1.3,0],[0.5,5.5,0],[0.6,6.6,0],[0.2,2.8,0],[0.3,3.6,0],[0.6,5.4,0],[0.7,6.2,0],[0.5,1.4,0],[1.2,5.5,0],[0.7,3.6,0],[0.7,6.6,0],[0.4,4.0,0],[0.7,7.9,0],[0.4,4.0,0],[0.5,5.2,0],[0.7,4.2,0],[0.6,6.2,0],[0.5,2.7,0],[0.4,4.0,0],[0.3,0.3,0],[0.3,3.6,0],[0.4,1.8,0],[0.3,2.2,0],[0.4,0.4,0],[0.4,6.1,0],[1.4,8.4,0],[1.0,5.4,0],[0.8,5.2,0],[0.4,1.4,0],[0.8,7.8,0],[1.5,8.5,1],[1.4,5.5,0],[1.3,8.8,1],[1.5,5.0,1],[1.1,2.1,0],[1.1,4.6,0],[0.8,4.5,0],[1.1,6.5,0],[1.3,5.5,0],[1.1,3.7,0],[0.9,8.0,0],[1.3,4.5,0],[1.2,6.1,0],[1.2,7.0,0],[1.1,6.9,0],[1.7,10.0,1],[2.7,11.6,1],[1.9,7.5,1],[1.1,5.9,0],[1.6,5.8,0],[1.0,6.7,0],[0.5,2.2,0],[0.6,5.6,0],[1.4,10.1,0],[1.4,9.1,0],[1.3,6.7,0],[0.9,5.9,0],[0.6,3.1,0],[1.1,4.7,0],[1.4,6.2,0],[1.6,5.9,0],[1.2,5.1,0],[0.7,4.8,0],[0.6,5.8,0],[0.7,5.5,0],[1.1,7.1,0],[2.3,6.4,1],[1.5,6.5,0],[0.7,5.6,0],[0.9,4.8,0],[1.0,4.9,0],[1.5,7.8,1],[2.3,13.7,1],[0.8,5.7,0],[0.7,2.8,0],[0.5,3.8,0],[0.7,4.7,0],[0.9,3.1,0],[0.7,5.3,0],[0.5,2.5,0],[0.6,5.3,0],[0.3,1.6,0],[0.2,1.4,0],[0.6,7.1,0],[1.3,7.2,0],[0.8,4.7,0],[0.5,4.9,0],[0.3,2.8,0],[0.3,5.5,0],[1.2,2.2,0],[0.9,7.4,0],[0.6,6.2,0],[0.8,7.7,0],[1.2,3.3,0],[0.6,3.3,0],[0.9,7.5,0],[0.5,5.0,0],[1.1,4.4,0],[0.4,0.7,0],[0.5,1.4,0],[0.4,3.9,0],[0.2,2.3,0],[0.8,8.3,0],[1.4,9.3,1],[0.9,5.6,0],[0.8,6.6,0],[2.3,12.0,1],[1.3,9.0,0],[0.5,1.6,0],[0.6,4.2,0],[0.3,4.3,0],[0.4,4.7,0],[0.7,2.9,0],[0.7,8.0,0],[0.8,8.3,0],[1.1,8.7,0],[0.5,4.8,0],[2.0,9.3,1],[1.4,8.4,0],[0.8,4.6,0],[2.4,12.2,1],[1.3,5.7,0],[1.0,6.7,0],[0.8,5.8,0],[1.0,4.4,0],[0.6,2.1,0],[0.6,6.4,0],[1.0,6.6,0],[0.4,3.4,0],[1.3,9.5,1],[1.2,3.5,0],[0.7,1.6,0],[0.3,0.8,0],[0.2,2.2,0],[0.3,1.7,0],[0.2,3.5,0],[1.1,10.6,1],[0.7,4.9,0],[0.4,3.8,0],[0.6,5.1,0],[0.2,0.3,0],[0.7,6.8,0],[0.8,7.2,0],[0.7,4.0,0],[0.7,4.0,0],[0.6,3.7,0],[2.2,9.7,1],[2.4,8.4,1],[2.5,12.3,1],[1.4,10.0,0],[1.9,10.0,1],[0.8,4.8,0],[0.5,4.2,0],[2.7,12.0,1],[3.8,12.5,1],[1.0,7.1,0],[1.0,6.8,0],[0.4,1.9,0],[0.3,1.7,0],[2.6,11.7,1],[1.2,8.9,0],[0.5,3.8,0],[0.8,9.7,0],[1.3,8.3,0],[1.5,9.3,1],[2.0,10.9,1],[0.9,2.8,0],[0.8,6.2,0],[0.4,0.3,0],[0.3,2.9,0],[0.5,4.6,0],[0.3,2.3,0],[3.0,13.2,1],[1.2,2.6,0],[0.5,1.7,0],[0.9,7.8,1],[1.3,3.3,0],[1.5,6.6,0],[1.0,6.3,0],[1.7,9.0,1],[0.7,3.3,0],[0.5,5.6,0],[1.6,10.1,1],[0.8,6.1,0],[1.1,5.1,0],[0.5,7.1,0],[1.0,8.3,1],[2.2,10.5,1],[1.0,7.9,0],[0.7,7.2,0],[0.8,5.7,0],[3.1,14.9,1],[3.3,15.8,1],[1.4,7.5,0],[2.9,13.2,1],[2.6,13.4,1],[1.6,8.4,1],[1.0,6.9,0],[0.6,5.2,0],[1.2,7.2,0],[0.5,4.0,0],[0.3,3.2,0],[1.3,3.2,0],[0.9,5.2,0],[1.9,8.7,1],[1.5,6.9,0],[3.0,14.5,1],[2.1,9.4,1],[1.6,8.4,0],[1.3,7.9,0],[2.1,11.8,1],[1.6,9.9,1],[1.6,10.3,1],[1.3,4.4,0],[1.7,6.1,0],[0.6,5.1,1],[2.7,13.8,1],[1.4,5.8,0],[1.1,9.0,0],[0.6,6.3,0],[0.7,5.4,0],[1.1,2.3,0],[0.4,0.0,0],[0.2,2.4,0],[0.2,3.1,0],[0.5,4.4,0],[1.4,7.3,0],[2.0,9.1,1],[0.8,4.9,0],[1.3,8.4,1],[2.4,12.2,1],[2.2,11.5,1],[2.0,10.3,1],[0.9,1.6,0],[0.9,1.9,0],[1.3,7.3,1],[0.8,2.0,0],[0.4,0.0,0],[0.7,1.9,0],[1.3,1.6,1],[1.2,0.0,0],[1.2,3.7,0],[0.6,0.0,0],[0.3,1.5,0]]}],"live":{"stations":[{"name":"제주여객선터미널","time":"2026-11-17T07:43","wind":6.0,"dir":83.4,"gust1":14.0,"gust10":15.9,"max":11.2,"oper":"좋음","sick":"나쁨","warn":"특보 없음","notices":["풍랑주의보 : 동해남부전해상, 남해동부안쪽먼바다"]},{"name":"제주항 서방파제","time":"2026-11-17T07:42","wind":12.1,"dir":82.6,"gust1":13.8,"gust10":15.2,"max":13.6,"oper":"좋음","sick":"나쁨","warn":"특보 없음","notices":["풍랑주의보 : 동해남부전해상, 남해동부안쪽먼바다"]},{"name":"완도여객선터미널","time":"2026-11-17T07:45","wind":7.3,"dir":73.8,"gust1":9.1,"gust10":9.1,"max":7.3,"oper":"나쁨","sick":"매우나쁨","warn":"{\"warn_list\": {}}","notices":["풍랑주의보 : 동해남부전해상, 남해동부안쪽먼바다"]}],"schedule":[{"t":"0800","ship":"산타모니카","frm":"진도","to":"제주","rt":"진도상추자-제주","se":"비운","st":"출항전","why":"기상악화"},{"t":"0800","ship":"송림블루오션","frm":"제주","to":"완도","rt":"제주추자도-완도","se":"통제","st":"출항전","why":"기상악화"},{"t":"1100","ship":"산타모니카","frm":"제주","to":"진도","rt":"진도상추자-제주","se":"비운","st":"출항전","why":"기상악화"},{"t":"1330","ship":"산타모니카","frm":"진도","to":"제주","rt":"진도상추자-제주","se":"비운","st":"출항전","why":"기상악화"},{"t":"1340","ship":"송림블루오션","frm":"완도","to":"제주","rt":"제주추자도-완도","se":"통제","st":"출항전","why":"기상악화"},{"t":"1620","ship":"산타모니카","frm":"제주","to":"진도","rt":"진도상추자-제주","se":"비운","st":"출항전","why":"기상악화"}],"date":"20261117","fetched":"2026-11-17 07:47","buoy":{"time":"2026-11-17T07:00","wh":2.1,"wd":57.0,"ws":10.6,"gst":13.5,"tw":18.3},"fc":[{"fc":"202611170500","ef":"202611170000","w1":"E","w2":"SE","s1":9.0,"s2":13.0,"wh1":1.5,"wh2":2.5,"wf":"흐리고 한때 비"},{"fc":"202611170500","ef":"202611171200","w1":"W","w2":"NW","s1":8.0,"s2":12.0,"wh1":1.0,"wh2":2.0,"wf":"흐리고 가끔 비"},{"fc":"202611170500","ef":"202611180000","w1":"NW","w2":"N","s1":9.0,"s2":13.0,"wh1":1.5,"wh2":2.5,"wf":"흐리고 가끔 비"},{"fc":"202611170500","ef":"202611181200","w1":"NW","w2":"N","s1":10.0,"s2":14.0,"wh1":2.0,"wh2":3.0,"wf":"흐리고 가끔 비"},{"fc":"202611170500","ef":"202611190000","w1":"NW","w2":"N","s1":10.0,"s2":15.0,"wh1":2.0,"wh2":3.5,"wf":"구름많고 한때 비"},{"fc":"202611170500","ef":"202611191200","w1":"NW","w2":"N","s1":10.0,"s2":15.0,"wh1":2.0,"wh2":3.5,"wf":"흐리고 한때 비"},{"fc":"202611170500","ef":"202611200000","w1":"NW","w2":"N","s1":10.0,"s2":15.0,"wh1":2.0,"wh2":3.5,"wf":"흐리고 가끔 비"},{"fc":"202611170500","ef":"202611201200","w1":"NW","w2":"N","s1":10.0,"s2":15.0,"wh1":2.0,"wh2":3.5,"wf":"구름많고 가끔 비"}]}};
+  var $=function(id){return document.getElementById(id)};
+  var SEASON=['겨울철(12~2월)','봄철(3~5월)','여름철(6~8월)','가을철(9~11월)'];
+  function seasonOf(m){return m===11||m<2?0:m<5?1:m<8?2:3}
+  var now=new Date(), state={ship:0,month:now.getMonth()};
+  $('today').textContent=D.live.fetched.slice(5,10).replace('-','월 ')+'일 '+D.live.fetched.slice(11)+' 갱신';
+
+  D.ships.forEach(function(s,i){var b=document.createElement('button');b.id='ship-'+i;
+    b.innerHTML=s.name+'<small>'+s.kind+(s.last<'2025'?' · 운항 종료':'')+'</small>';
+    b.onclick=function(){state.ship=i;render()};$('ships').appendChild(b)});
+  var B=D.live.buoy, PRE=[['지금 추자 바다',B?B.wh:0.6,B?Math.round(B.ws*2)/2:4.5],['잔잔한 날',0.5,3],['바람 부는 날',1.6,9],['풍랑주의보급',2.6,13]];
+  PRE.forEach(function(p,i){var b=document.createElement('button');b.id='pre-'+i;b.textContent=p[0];
+    b.onclick=function(){$('wave').value=p[1];$('wind').value=p[2];render()};$('presets').appendChild(b)});
+  $('wave').value=PRE[0][1];$('wind').value=PRE[0][2];
+  ['wave','wind'].forEach(function(id){$(id).addEventListener('input',render)});
+  function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+  var RW=0.3,RS=1.5;
+  function near(pts,w,s){var sc=pts.map(function(p){return [Math.pow((p[0]-w)/RW,2)+Math.pow((p[1]-s)/RS,2),p]});
+    var n=sc.filter(function(a){return a[0]<=1});
+    if(n.length<25){sc.sort(function(a,b){return a[0]-b[0]});n=sc.slice(0,25)}
+    return n.map(function(a){return a[1]})}
+  function draw(pts,w,s){
+    var c=$('scatter'),g=c.getContext('2d'),W=c.width,H=c.height,L=84,R=20,T=16,B2=74;
+    var X=function(v){return L+(v/5)*(W-L-R)},Y=function(v){return H-B2-(v/20)*(H-T-B2)};
+    g.clearRect(0,0,W,H);g.font='28px '+css('--font');g.lineWidth=1;g.strokeStyle=css('--line');g.fillStyle=css('--muted');
+    for(var i=0;i<=5;i++){g.beginPath();g.moveTo(X(i),T);g.lineTo(X(i),H-B2);g.stroke();g.textAlign='center';g.fillText(i,X(i),H-B2+32)}
+    for(var j=0;j<=20;j+=5){g.beginPath();g.moveTo(L,Y(j));g.lineTo(W-R,Y(j));g.stroke();g.textAlign='right';g.fillText(j,L-10,Y(j)+9)}
+    g.textAlign='center';g.fillText('유의파고 (m)',(L+W-R)/2,H-8);
+    g.save();g.translate(28,(T+H-B2)/2);g.rotate(-Math.PI/2);g.fillText('풍속 (m/s)',0,0);g.restore();
+    [0,1].forEach(function(k){g.fillStyle=css(k?'--bad':'--dot');g.globalAlpha=k?0.8:0.55;
+      pts.forEach(function(p){if(p[2]===k){g.beginPath();g.arc(X(Math.min(5,p[0])),Y(Math.min(20,p[1])),4.2,0,7);g.fill()}})});
+    g.globalAlpha=1;g.strokeStyle=css('--ink');g.lineWidth=3;
+    g.beginPath();g.ellipse(X(w),Y(s),(RW/5)*(W-L-R),(RS/20)*(H-T-B2),0,0,7);g.stroke();
+    g.fillStyle=css('--ink');g.beginPath();g.arc(X(w),Y(s),6,0,7);g.fill();
+  }
+
+  function pill(s){var c=s.se==='통제'?'bad':s.se==='비운'?'':s.st==='완료'?'ok':s.st==='운항중'?'go':'';
+    var t=s.se==='통제'?'통제':s.se==='비운'?'휴항':s.st==='출항전'?'출항 전':s.st;
+    return '<span class="pill '+c+'">'+t+'</span>'}
+  function bu0(v){return v<-90?'–':v.toFixed(1)}
+  function live(){
+    var L=D.live;
+    $('livehead').textContent=(+L.date.slice(4,6))+'월 '+(+L.date.slice(6))+'일 실제 운항 상황';
+    $('sched').innerHTML=L.schedule.length?L.schedule.map(function(s){
+      return '<li><time>'+s.t.slice(0,2)+':'+s.t.slice(2)+'</time><div>'+s.ship+' <em>'+s.frm+' → '+s.to+(s.why?' · '+s.why:'')+'</em></div>'+pill(s)+'</li>'}).join('')
+      :'<li><div>오늘 편성 정보를 받지 못했습니다.</div></li>';
+    var warn=L.stations.filter(function(s){return s.warn&&s.warn.indexOf('없음')<0});
+    $('alert').className='alert'+(warn.length?' on':'');
+    $('alert').lastElementChild.textContent=warn.length?'해상 특보 발효 중: '+warn.map(function(s){return s.name}).join(', '):'제주·완도 해상 특보 없음';
+    var bu=L.buoy?'<div><span>추자도 해양기상부이 (기상청)</span><b>'+bu0(L.buoy.wh)+'</b> m 파고<span>풍속 '+bu0(L.buoy.ws)+' m/s · 순간 '+bu0(L.buoy.gst)+' m/s · '+L.buoy.time.slice(11)+' 관측</span></div>':'';
+    $('wx').innerHTML=bu+L.stations.map(function(s){
+      return '<div><span>'+s.name+'</span><b>'+s.wind.toFixed(1)+'</b> m/s<span>순간 최대 '+s.gust10.toFixed(1)+' m/s · 운항 지수 '+(s.oper||'-')+'</span></div>'}).join('');
+    $('livenote').textContent='풍속은 '+L.stations[0].time.slice(11)+' 무렵 관측값입니다. 이 화면은 스스로 새로 고쳐지지 않고, 자료를 다시 받아 올릴 때 바뀝니다.';
+  }
+
+  function prob(pts,w,s){var nb=near(pts,w,s);return Math.round(nb.filter(function(p){return p[2]}).length/nb.length*100)}
+  function forecast(s){
+    var F=D.live.fc;if(!F||!F.length){$('fcsec').hidden=true;return}
+    $('fcsec').hidden=false;var WD=['일','월','화','수','목','금','토'],el=$('fc');el.textContent='';
+    F.forEach(function(f){
+      var y=+f.ef.slice(0,4),mo=+f.ef.slice(4,6),da=+f.ef.slice(6,8),pm=f.ef.slice(8,10)==='12';
+      var mw=(f.wh1+f.wh2)/2,ms=(f.s1+f.s2)/2,p=prob(s.pts,mw,ms),hi=prob(s.pts,f.wh2,f.s2),tone=p<15?'ok':p<40?'warn':'bad';
+      var li=document.createElement('li'),b=document.createElement('button');
+      b.innerHTML='<span class="d">'+mo+'/'+da+' '+WD[new Date(y,mo-1,da).getDay()]+'<small>'+(pm?'오후':'오전')+'</small></span>'+
+        '<span class="w"><b>파고 '+f.wh1.toFixed(1)+'~'+f.wh2.toFixed(1)+' m · 풍속 '+f.s1+'~'+f.s2+' m/s</b>'+f.wf+(hi>p+9?' · 예보 상단이면 '+hi+'%':'')+'</span>'+
+        '<span class="p" style="color:var(--'+tone+')">'+p+'%</span>';
+      b.setAttribute('aria-label',mo+'월 '+da+'일 '+(pm?'오후':'오전')+' 조건을 위에 넣기');
+      b.onclick=function(){$('wave').value=mw;$('wind').value=ms;render();(b.closest('.view')||document.querySelector('.app')).scrollTo({top:0,behavior:'smooth'});window.scrollTo({top:0,behavior:'smooth'})};
+      li.appendChild(b);el.appendChild(li)});
+    var t0=F[0].fc;$('fchead').textContent=s.name+' 앞으로의 예보와 결항 확률';
+    $('fcnote').textContent='기상청 제주도북부앞바다 해상예보('+(+t0.slice(4,6))+'월 '+(+t0.slice(6,8))+'일 '+t0.slice(8,10)+'시 발표)의 파고·풍속 범위 가운데값으로 계산했습니다. 줄을 누르면 그 조건이 위 확률에 들어갑니다. 예보는 구역 전체 범위라 추자도 부이 관측값과 차이가 날 수 있습니다.';
+  }
+  function render(){
+    var s=D.ships[state.ship], m=state.month, w=+$('wave').value, ws=+$('wind').value;
+    var nb=near(s.pts,w,ws), n=nb.length, c=nb.filter(function(p){return p[2]}).length;
+    var basis='추자도 파고·풍속이 비슷했던 과거 <b>'+n+'</b>일 가운데 <b>'+c+'</b>일에 '+s.name+'가 통제됐습니다.';
+    $('o-wave').textContent=w.toFixed(1)+' m';$('o-wind').textContent=ws.toFixed(1)+' m/s';
+    PRE.forEach(function(q,i){$('pre-'+i).setAttribute('aria-pressed',String(+q[1]===w&&+q[2]===ws))});
+    $('schead').textContent=s.name+' 운항일 '+s.pts.length.toLocaleString()+'일의 파고·풍속과 결과';
+    draw(s.pts,w,ws);
+    forecast(s);
+    var p=n?Math.round(c/n*100):0, tone=p<15?'ok':p<40?'warn':'bad';
+    $('pct').textContent=n?p:'–';$('arc').setAttribute('stroke-dasharray',p+' 100');$('arc').setAttribute('stroke','var(--'+tone+')');
+    $('label').textContent=!n?'기록이 없습니다':p<15?'운항 가능성이 높습니다':p<40?'결항에 대비하세요':'결항 가능성이 높습니다';
+    $('label').style.color='var(--'+tone+')';
+    $('basis').innerHTML=basis;
+    $('advice').textContent=p<15?'예정대로 움직여도 좋습니다. 출발 전 선사 공지만 한 번 확인하세요.'
+      :p<40?'돌아가는 배는 하루 여유를 두고, 숙소에 연박이 가능한지 미리 물어 두세요.'
+      :'배가 뜨지 않을 가능성이 큽니다. 일정을 미루거나 다음 날 첫 배를 알아보세요.';
+    D.ships.forEach(function(_,i){$('ship-'+i).setAttribute('aria-pressed',String(i===state.ship))});
+    // months
+    var el=$('months');el.textContent='';
+    var rates=s.dayrate.map(function(a){return a[0]?a[1]/a[0]*100:0}),mx=Math.max(40,Math.max.apply(null,rates));
+    rates.forEach(function(r,i){var d=document.createElement('div');if(i===m)d.className='now';
+      d.innerHTML='<em>'+Math.round(r)+'</em><i style="height:'+(r/mx*82)+'%"></i>'+(i+1);el.appendChild(d)});
+    $('facts').innerHTML='<div><b>'+s.sail.toLocaleString()+'</b><span>편성된 운항 편</span></div><div><b>'+s.ctrl.toLocaleString()+'</b><span>기상 통제 편</span></div><div><b>'+(s.ctrl/s.sail*100).toFixed(1)+'%</b><span>편 기준 통제율</span></div>';
+    // strip
+    var st=$('strip');st.textContent='';var end=new Date(s.stripEnd+'T00:00:00'),start=new Date(end);start.setDate(end.getDate()-364);
+    for(var i=0;i<start.getDay();i++){var e=document.createElement('i');e.style.visibility='hidden';st.appendChild(e)}
+    for(var j=0;j<365;j++){var e2=document.createElement('i');e2.className='s'+s.strip[j];st.appendChild(e2)}
+    $('axis').innerHTML='<span>'+start.getFullYear()+'.'+(start.getMonth()+1)+'</span><span>'+end.getFullYear()+'.'+(end.getMonth()+1)+'</span>';
+    if(!s.acc){var P=s.pts,R=P.map(function(p,i){var o=P.slice(0,i).concat(P.slice(i+1));var nb=near(o,p[0],p[1]);return [nb.filter(function(q){return q[2]}).length/nb.length,p[2]]});
+      var ok=R.filter(function(r){return (r[0]>=.5)===!!r[1]}).length,miss=R.filter(function(r){return r[1]&&r[0]<.15}).length;
+      s.acc={n:R.length,ok:ok,miss:miss,bins:[[0,.05],[.05,.15],[.15,.4],[.4,.7],[.7,1.01]].map(function(b){var x=R.filter(function(r){return r[0]>=b[0]&&r[0]<b[1]});return [b,x.length,x.filter(function(r){return r[1]}).length]})}}
+    $('acchead').textContent=s.name+' 앱 확률과 실제 결과 비교';
+    $('acc').innerHTML='<tr><th>앱이 낸 확률</th><th>해당 날짜</th><th>실제 통제된 날</th><th>실제 비율</th></tr>'+s.acc.bins.map(function(b){return b[1]?'<tr><td>'+Math.round(b[0][0]*100)+'~'+Math.min(100,Math.round(b[0][1]*100))+'%</td><td>'+b[1]+'일</td><td>'+b[2]+'일</td><td><b>'+(b[2]/b[1]*100).toFixed(1)+'%</b></td></tr>':''}).join('');
+    $('accnote').textContent='과거 '+s.acc.n+'일을 하루씩 빼놓고 나머지 날짜만으로 확률을 낸 뒤 그날 실제 결과와 맞춰 본 것입니다. 50%를 기준으로 통제 여부를 가르면 '+(s.acc.ok/s.acc.n*100).toFixed(1)+'%의 날이 맞았습니다. 확률 15% 미만으로 봤는데 통제된 날도 '+s.acc.miss+'일 있었습니다. 안개나 오후 급변처럼 오전 파고·풍속으로 잡히지 않는 경우입니다. 확률은 가능성이지 확정이 아니므로 출발 전 선사 공지를 꼭 확인하세요.';
+    $('striphead').textContent=s.name+' 기록 마지막 1년, 날짜별 운항';
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+  new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  live();render();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(render);
+})();
+</script>
