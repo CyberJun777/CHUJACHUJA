@@ -46,4 +46,5 @@ open('app/assets/index.html','w',encoding='utf-8').write(head+body+'\n</body>\n<
 solo=src[:src.index(ANCHOR,src.index('var D={'))]+HOOK+src[src.index(ANCHOR,src.index('var D={')):]
 solo='<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>신양愛소리</title>\n</head>\n<body>\n'+solo+'\n'+CSS+'\n<script>\n'+open('live-update.js',encoding='utf-8').read()+'</script>\n</body>\n</html>\n'
 open(os.path.join(HERE,'..','..','신양애소리.html'),'w',encoding='utf-8').write(solo)
+open(os.path.join(HERE,'..','..','index.html'),'w',encoding='utf-8').write(solo)   # 웹 주소로 열 때 쓰는 같은 파일
 print('신양애소리.html',len(solo)//1024,'KB')
