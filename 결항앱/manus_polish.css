@@ -1,7 +1,7 @@
 /* 신양愛소리 — presentation-only overrides for the existing WebView DOM.
    Map geometry, SVG palette variables, data and JS state selectors stay intact. */
 :root {
-  --bg: #f3f6fb;
+  --bg: #ffffff;
   --surface: #ffffff;
   --ink: #18283b;
   --muted: #526279;
