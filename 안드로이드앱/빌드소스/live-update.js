@@ -1,4 +1,4 @@
-/* 신양愛소리 APK 전용: 앱을 열 때 깃허브에 올라온 그날 아침 자료(data/live.json)를 받아 화면에 반영한다.
+/* 신양愛소리 APK 전용: 앱을 열 때 깃허브에 올라온 최신 자료(data/live.json, 낮 동안 매시간 갱신)를 받아 화면에 반영한다.
    원본 화면 스크립트는 고치지 않는다. 새 자료를 기기에 저장한 뒤 화면을 한 번 다시 열면,
    원본 스크립트가 그 자료로 확률을 처음부터 다시 계산한다. 받지 못하면 마지막으로 받은 자료(없으면 내장 자료)를 쓴다. */
 (function(){
@@ -48,7 +48,7 @@
     });
   }
   var n=document.getElementById('livenote');
-  if(n)n.textContent=n.textContent.replace('이 화면은 스스로 새로 고쳐지지 않고, 자료를 다시 받아 올릴 때 바뀝니다.','앱을 열 때 인터넷에 연결되어 있으면 그날 아침에 올라온 자료를 새로 받아 옵니다.');
+  if(n)n.textContent=n.textContent.replace('이 화면은 스스로 새로 고쳐지지 않고, 자료를 다시 받아 올릴 때 바뀝니다.','앱을 열 때 인터넷에 연결되어 있으면 최신 자료를 새로 받아 옵니다. 자료는 오전 6시부터 오후 8시까지 한 시간마다 갱신됩니다.');
   banner(false);
   window.__liveCheck=check;
   document.addEventListener('visibilitychange',function(){if(!document.hidden)check()});
