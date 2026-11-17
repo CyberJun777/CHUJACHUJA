@@ -41,3 +41,9 @@ CSS='<style>.live-stale{margin:12px 16px 0;padding:10px 12px;border-radius:12px;
 body+='\n'+CSS+'\n<script>\n'+open('live-update.js',encoding='utf-8').read()+'</script>'
 head='<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>\n'+'\n'.join(allcss)+'\n</style>\n</head>\n<body>\n'
 open('app/assets/index.html','w',encoding='utf-8').write(head+body+'\n</body>\n</html>\n')
+
+# 같은 화면을 파일 하나짜리 HTML로도 만든다(아이폰·PC 브라우저용). 글꼴은 내장하지 않고 인터넷에서 받는다.
+solo=src[:src.index(ANCHOR,src.index('var D={'))]+HOOK+src[src.index(ANCHOR,src.index('var D={')):]
+solo='<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>신양愛소리</title>\n</head>\n<body>\n'+solo+'\n'+CSS+'\n<script>\n'+open('live-update.js',encoding='utf-8').read()+'</script>\n</body>\n</html>\n'
+open(os.path.join(HERE,'..','..','신양애소리.html'),'w',encoding='utf-8').write(solo)
+print('신양애소리.html',len(solo)//1024,'KB')
