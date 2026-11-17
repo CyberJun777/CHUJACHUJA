@@ -210,5 +210,6 @@ JS='''
 '''.replace('/*MAP*/null',MAP)
 t=t.rstrip()+'\n'+JS
 import skin; t=skin.apply(t)
+import places_extra; t=places_extra.apply(t)  # 관광지 사진·자료 덧붙임
 open('guide.tpl.html','w',encoding='utf-8').write(t)
 print('ok',len(t))
