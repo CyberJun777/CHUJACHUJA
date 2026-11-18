@@ -74,6 +74,7 @@ canvas{width:100%;height:auto;display:block}
 .sched time{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 .sched div{min-width:0}
 .sched em{font-style:normal;color:var(--muted);font-size:12px;display:block}
+section[hidden]{display:none!important}
 .pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--none);color:var(--muted)}
 .shipnow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .shipnow li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
@@ -143,7 +144,7 @@ canvas{width:100%;height:auto;display:block}
     <div class="advice" id="advice"></div>
   </section>
 
-  <section>
+  <section hidden>
     <h2>바다 상태</h2>
     <div class="presets" id="presets" role="group" aria-label="바다 상태 예시"></div>
     <div class="ctl"><label for="wave">유의파고</label><output id="o-wave"></output>
@@ -297,11 +298,10 @@ canvas{width:100%;height:auto;display:block}
       b.innerHTML='<span class="d">'+mo+'/'+da+' '+WD[new Date(y,mo-1,da).getDay()]+'<small>'+(pm?'오후':'오전')+'</small></span>'+
         '<span class="w"><b>파고 '+f.wh1.toFixed(1)+'~'+f.wh2.toFixed(1)+' m · 풍속 '+f.s1+'~'+f.s2+' m/s</b>'+f.wf+(hi>p+9?' · 예보 상단이면 '+hi+'%':'')+'</span>'+
         '<span class="p" style="color:var(--'+tone+')">'+p+'%</span>';
-      b.setAttribute('aria-label',mo+'월 '+da+'일 '+(pm?'오후':'오전')+' 조건을 위에 넣기');
-      b.onclick=function(){$('wave').value=mw;$('wind').value=ms;render();(b.closest('.view')||document.querySelector('.app')).scrollTo({top:0,behavior:'smooth'});window.scrollTo({top:0,behavior:'smooth'})};
+      b.tabIndex=-1;b.style.cursor='default';
       li.appendChild(b);el.appendChild(li)});
     var t0=F[0].fc;$('fchead').textContent=s.name+' 앞으로의 예보와 결항 확률';
-    $('fcnote').textContent='기상청 제주도북부앞바다 해상예보('+(+t0.slice(4,6))+'월 '+(+t0.slice(6,8))+'일 '+t0.slice(8,10)+'시 발표)의 파고·풍속 범위 가운데값으로 계산했습니다. 줄을 누르면 그 조건이 위 확률에 들어갑니다. 예보는 구역 전체 범위라 추자도 부이 관측값과 차이가 날 수 있습니다.';
+    $('fcnote').textContent='기상청 제주도북부앞바다 해상예보('+(+t0.slice(4,6))+'월 '+(+t0.slice(6,8))+'일 '+t0.slice(8,10)+'시 발표)의 파고·풍속 범위 가운데값으로 계산했습니다. 예보는 구역 전체 범위라 추자도 부이 관측값과 차이가 날 수 있습니다.';
   }
   function render(){
     var s=D.ships[state.ship], m=state.month, w=+$('wave').value, ws=+$('wind').value;
