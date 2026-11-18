@@ -666,7 +666,7 @@ section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba
  </div>
  <nav class="bottom-nav" aria-label="메인 메뉴"><button data-menu="map"><span class="menu-icon">◒</span><b>추자도<br>사운드스케이프</b></button><button data-menu="ferry"><span class="menu-icon">≋</span><b>운항정보 및<br>기상 정보</b></button><button data-menu="places"><span class="menu-icon">⌖</span><b>추자도<br>관광지</b></button><button data-menu="info"><span class="menu-icon">i</span><b>앱<br>이용안내</b></button></nav>
 
- <div class="view" id="view-info" hidden><button class="back" data-go="home">‹ 메인 화면</button><h2 class="vt">앱 이용안내</h2><section class="info-card"><span class="section-kicker">신양愛소리</span><h3>추자도의 소리와 정보를 한곳에서</h3><p>추자도 신양2리의 사운드스케이프와 관광지, 운항·기상 정보를 살펴볼 수 있습니다.</p></section><section class="info-card"><h3>메뉴 안내</h3><dl><dt>추자도 사운드스케이프</dt><dd>신양2리 명소와 추자도 관광지를 지도에서 둘러보고 파도 소리를 들어보세요.</dd><dt>운항정보 및 기상 정보</dt><dd>선박별 결항 확률과 파고·바람 조건, 앞으로 사흘의 예보를 확인합니다.</dd><dt>추자도 관광지</dt><dd>지도에 표시된 관광지 21곳과 장소 설명을 확인합니다.</dd></dl></section><p class="hint">운항 정보는 한국해양교통안전공단·기상청 자료를 바탕으로 계산합니다. 실제 탑승 전 최신 선사 공지를 확인하세요.</p></div>
+ <div class="view" id="view-info" hidden><button class="back" data-go="home">‹ 메인 화면</button><h2 class="vt">앱 이용안내</h2><section class="info-card"><span class="section-kicker">신양愛소리</span><h3>추자도의 소리와 정보를 한곳에서</h3><p>추자도 신양2리의 사운드스케이프와 관광지, 운항·기상 정보를 살펴볼 수 있습니다.</p></section><section class="info-card"><h3>메뉴 안내</h3><dl><dt>추자도 사운드스케이프</dt><dd>신양2리 명소와 추자도 관광지를 지도에서 둘러보고 파도 소리를 들어보세요.</dd><dt>운항정보 및 기상 정보</dt><dd>선박별 결항 확률과 파고·바람 조건, 앞으로 사흘의 예보를 확인합니다.</dd><dt>추자도 관광지</dt><dd>지도에 표시된 관광지 21곳과 장소 설명을 확인합니다.</dd></dl></section><p class="hint">운항 정보는 한국해양교통안전공단·기상청 자료를 바탕으로 계산합니다. 실제 탑승 전 최신 선사 공지를 확인하세요.</p><section class="info-card"><h3>위치 정보 이용</h3><p>지도의 "내 위치"를 누르고 동의한 경우에만 휴대폰의 위치를 씁니다. 위치는 지도에 점을 찍고 관광지까지 거리를 재는 데만 쓰고, 휴대폰 밖으로 보내거나 저장하지 않습니다. 버튼을 다시 누르면 바로 멈춥니다.</p><p>"카카오맵 길찾기"를 누르면 카카오맵으로 넘어가며, 그곳에서의 위치 이용은 카카오맵의 동의 절차와 약관을 따릅니다.</p></section></div>
 
  <div class="view" id="view-map" hidden>
   <button class="back" data-go="home">‹ 메인 화면</button>
@@ -1058,3 +1058,80 @@ section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba
   all();
 })();
 </script>
+<style id="nv-css">
+.nv-bar{display:flex;align-items:center;gap:10px;margin:10px 0 0;flex-wrap:wrap}
+.nv-me{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.nv-me[aria-pressed="true"]{background:var(--sea);border-color:var(--sea);color:#fff}
+.nv-me svg{width:16px;height:16px;fill:currentColor}
+.nv-msg{font-size:12.5px;color:var(--muted);flex:1 1 180px}
+.nv-go{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;grid-column:1/-1}
+.nv-go a{display:inline-flex;align-items:center;gap:6px;background:var(--sea);color:#fff;text-decoration:none;border-radius:999px;padding:8px 16px;font-size:14px;font-weight:700}
+.nv-go a.alt{background:transparent;color:var(--sea);border:1px solid var(--sea)}
+.nv-go small{flex-basis:100%;font-size:12px;color:var(--muted)}
+.nv-dot{pointer-events:none}
+.nv-ask{flex-basis:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.55}
+.nv-ask p{margin:0 0 10px}
+.nv-ask div{display:flex;gap:8px}
+.nv-ask button{font:inherit;font-size:13.5px;font-weight:700;border-radius:999px;padding:7px 16px;cursor:pointer;border:1px solid var(--sea)}
+.nv-ask .ok{background:var(--sea);color:#fff}.nv-ask .no{background:transparent;color:var(--sea)}
+</style>
+<script id="nv-js">(function(){
+  var P={"대왕산":[33.934715,126.321836,"대왕산",false],"석두청산":[33.932781,126.327733,"석두청산",false],"졸복산":[33.931228,126.322354,"졸복산",false],"용둠벙":[33.9362,126.319601,"용둠벙",true],"대왕산 황금길":[33.935102,126.3206,"대왕산 황금길",true],"장작평사":[33.937201,126.326202,"장작평사",true],"돈대산":[33.948226,126.322983,"돈대산",false],"추석산":[33.950521,126.335119,"추석산",false],"전망바위":[33.947182,126.341009,"전망바위",false],"추자도등대":[33.939141,126.329517,"추자도등대",false],"신양항":[33.944279,126.32888,"신양항",false],"예초리포구":[33.955113,126.33184,"예초리포구",false],"모진이몽돌해변":[33.945574,126.334445,"모진이몽돌해변",false],"봉글레산":[33.965327,126.288306,"봉글레산",false],"순효각":[33.96135,126.293886,"순효각",false],"제주최영장군사당":[33.965137,126.295425,"제주최영장군사당",false],"추자처사각":[33.958587,126.295107,"추자처사각",false],"상추자전망대":[33.963952,126.290164,"상추자전망대",false],"용둠벙전망대":[33.961116,126.285775,"용둠벙전망대",false],"상추자도항":[33.962375,126.295351,"상추자도항",false],"후포해변":[33.962657,126.289216,"후포해변",false]},$=function(id){return document.getElementById(id)},me=null,watch=null,on=false;
+  var K=16290.659747969072,C=0.8295252446849841,LAT0=33.922,LAT1=33.972,LON0=126.276,LON1=126.35;
+  function xy(lat,lon){return[(lon-LON0)*C*K,(LAT1-lat)*K]}
+  function km(a,b,c,d){var R=6371,r=Math.PI/180,x=(d-b)*r*Math.cos((a+c)/2*r),y=(c-a)*r;return R*Math.sqrt(x*x+y*y)}
+  function inside(){return me&&me.lat>LAT0-0.005&&me.lat<LAT1+0.005&&me.lon>LON0-0.005&&me.lon<LON1+0.005}
+  function msg(t){var m=document.querySelector('.nv-msg');if(m)m.textContent=t}
+  function cur(){var b=$('pick')&&$('pick').querySelector('b');return b&&b.firstChild?P[b.firstChild.textContent.trim()]:null}
+  function info(){
+    if(!on)return;if(!me){msg('위치를 찾는 중입니다…');return}
+    var p=cur(),d=p?km(me.lat,me.lon,p[0],p[1]):null;
+    if(inside())msg('파란 점이 지금 계신 곳입니다'+(d!=null?'. '+p[2]+'까지 직선으로 약 '+(d<1?Math.round(d*1000)+' m':d.toFixed(1)+' km'):'')+'.');
+    else msg('지금 추자도 밖에 계셔서 지도에는 표시하지 않습니다'+(d!=null?' ('+p[2]+'까지 약 '+Math.round(d)+' km)':'')+'.');
+  }
+  function dot(){
+    var s=$('map-full')&&$('map-full').querySelector('svg');if(!s)return;
+    var o=s.querySelector('.nv-dot');if(o)o.remove();
+    if(!on||!inside())return;
+    var q=xy(me.lat,me.lon),r=Math.max(4,Math.min(40,(me.acc||30)*K/111320/C)),ns='http://www.w3.org/2000/svg',g=document.createElementNS(ns,'g');
+    g.setAttribute('class','nv-dot');
+    g.innerHTML='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="'+r+'" fill="#3A6BF0" opacity=".15"/><circle cx="'+q[0]+'" cy="'+q[1]+'" r="7" fill="#3A6BF0" stroke="#fff" stroke-width="3"/>';
+    s.appendChild(g);
+  }
+  function stop(){on=false;if(watch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(watch);watch=null;var b=document.querySelector('.nv-me');if(b)b.setAttribute('aria-pressed','false');msg('');dot()}
+  function start(){
+    var b=document.querySelector('.nv-me');
+    if(!navigator.geolocation){msg('이 기기에서는 위치를 확인할 수 없습니다.');return}
+    on=true;b.setAttribute('aria-pressed','true');info();
+    watch=navigator.geolocation.watchPosition(function(p){me={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};dot();info()},
+      function(e){var t=e.code===1?'위치 권한이 꺼져 있습니다. 휴대폰 설정에서 이 앱의 위치 권한을 허용해 주세요.':'위치를 찾지 못했습니다. 잠시 뒤 다시 눌러 주세요.';stop();msg(t)},
+      {enableHighAccuracy:true,maximumAge:15000,timeout:20000});
+  }
+  var agreed=false;
+  function ask(){
+    if(document.querySelector('.nv-ask'))return;var d=document.querySelector('.nv-bar'),a=document.createElement('div');a.className='nv-ask';a.setAttribute('role','dialog');a.setAttribute('aria-label','위치 정보 이용 동의');
+    a.innerHTML='<p><b>위치 정보를 쓸까요?</b><br>지도에 지금 계신 곳을 표시하고 관광지까지 거리를 재는 데만 씁니다. 위치는 휴대폰 밖으로 보내거나 저장하지 않으며, 버튼을 다시 누르면 멈춥니다.</p><div><button type="button" class="ok">동의하고 내 위치 보기</button><button type="button" class="no">취소</button></div>';
+    d.appendChild(a);a.querySelector('.ok').focus();
+    a.querySelector('.ok').onclick=function(){agreed=true;a.remove();start()};
+    a.querySelector('.no').onclick=function(){a.remove();msg('')};
+  }
+  function bar(){
+    var z=$('zoom');if(!z||document.querySelector('.nv-bar'))return;
+    var d=document.createElement('div');d.className='nv-bar';
+    d.innerHTML='<button type="button" class="nv-me" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm9 3h-2.07A7 7 0 0 0 13 5.07V3h-2v2.07A7 7 0 0 0 5.07 11H3v2h2.07A7 7 0 0 0 11 18.93V21h2v-2.07A7 7 0 0 0 18.93 13H21v-2zm-9 6a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/></svg>내 위치</button><span class="nv-msg" role="status"></span>';
+    z.parentNode.insertBefore(d,z.nextSibling);
+    d.firstChild.onclick=function(){if(on){stop();return}if(agreed){start();return}ask()};
+  }
+  function go(){
+    var el=$('pick');if(!el||el.querySelector('.nv-go'))return;var p=cur();if(!p)return;
+    var n=encodeURIComponent(p[2]),w=document.createElement('div');w.className='nv-go';
+    w.innerHTML='<a href="https://map.kakao.com/link/to/'+n+','+p[0]+','+p[1]+'" target="_blank" rel="noopener">카카오맵 길찾기</a>'+
+      '<a class="alt" href="https://map.kakao.com/link/map/'+n+','+p[0]+','+p[1]+'" target="_blank" rel="noopener">위치만 보기</a>'+
+      '<small>카카오맵이 열리면 지금 위치에서 '+p[2]+'까지 가는 길을 안내합니다.'+(p[3]?' 이곳은 위치가 추정이라 근처까지 안내됩니다.':'')+'</small>';
+    var px=el.querySelector('.px');el.insertBefore(w,px||null);
+    info();
+  }
+  function all(){bar();go();dot()}
+  if(window.MutationObserver){['pick','map-full'].forEach(function(id){var e=$(id);if(e)new MutationObserver(all).observe(e,{childList:true})})}
+  all();
+})();</script>

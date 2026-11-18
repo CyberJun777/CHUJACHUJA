@@ -67,7 +67,7 @@ HOME='''<div class="app">
  </div>
  <nav class="bottom-nav" aria-label="메인 메뉴"><button data-menu="map"><span class="menu-icon">◒</span><b>추자도<br>사운드스케이프</b></button><button data-menu="ferry"><span class="menu-icon">≋</span><b>운항정보 및<br>기상 정보</b></button><button data-menu="places"><span class="menu-icon">⌖</span><b>추자도<br>관광지</b></button><button data-menu="info"><span class="menu-icon">i</span><b>앱<br>이용안내</b></button></nav>
 
- <div class="view" id="view-info" hidden><button class="back" data-go="home">‹ 메인 화면</button><h2 class="vt">앱 이용안내</h2><section class="info-card"><span class="section-kicker">신양愛소리</span><h3>추자도의 소리와 정보를 한곳에서</h3><p>추자도 신양2리의 사운드스케이프와 관광지, 운항·기상 정보를 살펴볼 수 있습니다.</p></section><section class="info-card"><h3>메뉴 안내</h3><dl><dt>추자도 사운드스케이프</dt><dd>신양2리 명소와 추자도 관광지를 지도에서 둘러보고 파도 소리를 들어보세요.</dd><dt>운항정보 및 기상 정보</dt><dd>선박별 결항 확률과 파고·바람 조건, 앞으로 사흘의 예보를 확인합니다.</dd><dt>추자도 관광지</dt><dd>지도에 표시된 관광지 21곳과 장소 설명을 확인합니다.</dd></dl></section><p class="hint">운항 정보는 한국해양교통안전공단·기상청 자료를 바탕으로 계산합니다. 실제 탑승 전 최신 선사 공지를 확인하세요.</p></div>
+ <div class="view" id="view-info" hidden><button class="back" data-go="home">‹ 메인 화면</button><h2 class="vt">앱 이용안내</h2><section class="info-card"><span class="section-kicker">신양愛소리</span><h3>추자도의 소리와 정보를 한곳에서</h3><p>추자도 신양2리의 사운드스케이프와 관광지, 운항·기상 정보를 살펴볼 수 있습니다.</p></section><section class="info-card"><h3>메뉴 안내</h3><dl><dt>추자도 사운드스케이프</dt><dd>신양2리 명소와 추자도 관광지를 지도에서 둘러보고 파도 소리를 들어보세요.</dd><dt>운항정보 및 기상 정보</dt><dd>선박별 결항 확률과 파고·바람 조건, 앞으로 사흘의 예보를 확인합니다.</dd><dt>추자도 관광지</dt><dd>지도에 표시된 관광지 21곳과 장소 설명을 확인합니다.</dd></dl></section><p class="hint">운항 정보는 한국해양교통안전공단·기상청 자료를 바탕으로 계산합니다. 실제 탑승 전 최신 선사 공지를 확인하세요.</p><section class="info-card"><h3>위치 정보 이용</h3><p>지도의 "내 위치"를 누르고 동의한 경우에만 휴대폰의 위치를 씁니다. 위치는 지도에 점을 찍고 관광지까지 거리를 재는 데만 쓰고, 휴대폰 밖으로 보내거나 저장하지 않습니다. 버튼을 다시 누르면 바로 멈춥니다.</p><p>"카카오맵 길찾기"를 누르면 카카오맵으로 넘어가며, 그곳에서의 위치 이용은 카카오맵의 동의 절차와 약관을 따릅니다.</p></section></div>
 
  <div class="view" id="view-map" hidden>
   <button class="back" data-go="home">‹ 메인 화면</button>
@@ -211,5 +211,6 @@ JS='''
 t=t.rstrip()+'\n'+JS
 import skin; t=skin.apply(t)
 import places_extra; t=places_extra.apply(t)  # 관광지 사진·자료 덧붙임
+import nav_extra; t=nav_extra.apply(t)  # 내 위치·길찾기
 open('guide.tpl.html','w',encoding='utf-8').write(t)
 print('ok',len(t))
