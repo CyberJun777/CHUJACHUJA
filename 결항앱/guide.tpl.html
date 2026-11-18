@@ -119,6 +119,12 @@ canvas{width:100%;height:auto;display:block}
 .sched div{min-width:0}
 .sched em{font-style:normal;color:var(--muted);font-size:12px;display:block}
 section[hidden]{display:none!important}
+.seanow{display:flex;flex-direction:column;gap:10px}
+.seanow .wb{border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;background:var(--none);color:var(--ink)}
+.seanow .wb.on{background:var(--bad);color:var(--surface)}
+.seanow dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:0;font-size:14px}
+.seanow dt{color:var(--muted)}
+.seanow dd{margin:0;font-weight:600}
 .pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--none);color:var(--muted)}
 .shipnow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .shipnow li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
@@ -723,6 +729,12 @@ section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba
     <div class="advice" id="advice"></div>
   </section>
 
+  <section id="seanow">
+    <h2>지금 제주 앞바다</h2>
+    <div class="seanow" id="seabox"></div>
+    <p class="hint" id="seanote"></p>
+  </section>
+
   <section hidden>
     <h2>바다 상태</h2>
     <div class="presets" id="presets" role="group" aria-label="바다 상태 예시"></div>
@@ -840,6 +852,18 @@ section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba
   function bu0(v){return v<-90?'–':v.toFixed(1)}
   function live(){
     var L=D.live;
+    (function(){
+      var DIR={N:'북',NE:'북동',E:'동',SE:'남동',S:'남',SW:'남서',W:'서',NW:'북서',NNE:'북북동',ENE:'동북동',ESE:'동남동',SSE:'남남동',SSW:'남남서',WSW:'서남서',WNW:'서북서',NNW:'북북서'};
+      var no=[];L.stations.forEach(function(st){(st.notices||[]).forEach(function(n){if(no.indexOf(n)<0)no.push(n)})});
+      var jw=no.filter(function(n){return n.indexOf('제주도앞바다')>=0||n.indexOf('제주도북부앞바다')>=0}).map(function(n){return n.split(':')[0].trim()});
+      var h='<div class="wb'+(jw.length?' on':'')+'">'+(jw.length?'제주도앞바다 '+jw.join(', ')+' 발효 중':'제주도앞바다 해상 특보 없음')+'</div><dl>';
+      var f=L.fc&&L.fc[0];
+      if(f){var pm=f.ef.slice(8,10)==='12',d=DIR[f.w1]||f.w1,d2=DIR[f.w2]||f.w2;
+        h+='<dt>예보 파고</dt><dd>'+f.wh1.toFixed(1)+'~'+f.wh2.toFixed(1)+' m</dd><dt>예보 바람</dt><dd>'+d+(d2&&d2!==d?'→'+d2:'')+'풍 '+f.s1+'~'+f.s2+' m/s</dd><dt>날씨</dt><dd>'+f.wf+'</dd>'}
+      if(L.buoy)h+='<dt>추자도 실측</dt><dd>파고 '+bu0(L.buoy.wh)+' m · 바람 '+bu0(L.buoy.ws)+' m/s (순간 '+bu0(L.buoy.gst)+') · '+L.buoy.time.slice(11)+'</dd>';
+      $('seabox').innerHTML=h+'</dl>';
+      $('seanote').textContent=f?'기상청 제주도북부앞바다(추자도 포함) 해상예보 '+(+f.fc.slice(6,8))+'일 '+f.fc.slice(8,10)+'시 발표분의 '+(+f.ef.slice(6,8))+'일 '+(f.ef.slice(8,10)==='12'?'오후':'밤~오전')+' 예보와, 추자도 해양기상부이 관측값입니다.':'해상예보를 받지 못했습니다.';
+    })();
     $('shipnow').innerHTML=D.ships.map(function(s){
       var r=L.schedule.filter(function(x){return x.ship===s.name}),n=r.length;
       function c(k){return r.filter(function(x){return x.se===k}).length}
