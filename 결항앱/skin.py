@@ -38,4 +38,10 @@ def apply(h):
     k=h.rindex('</style>')
     h=h[:k]+css+h[k:]
     i=h.index('<style')
-    return h[:i]+FONT+h[i:]
+    h=h[:i]+FONT+h[i:]
+    # 2026-11-18 도양님 "흰색 배경에 파란색으로, 전체 조정": 휴대폰 다크 모드여도 항상 밝은 테마로 고정
+    h=re.sub(r'prefers-color-scheme:\s*dark','prefers-color-scheme: light-only-off',h)
+    h=h.replace(':root{',':root{color-scheme:light;',1)
+    if '<meta name="color-scheme"' not in h:
+        h=h.replace('<style','<meta name="color-scheme" content="light">\n<style',1)
+    return h

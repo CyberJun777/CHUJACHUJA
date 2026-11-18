@@ -44,6 +44,12 @@ public class MainActivity extends Activity {
         });
         // "내 위치": 화면 안 동의 카드에서 동의한 뒤에만 불린다. 여기서 안드로이드 위치 권한을 한 번 더 묻는다.
         s.setGeolocationEnabled(true);
+        // 휴대폰이 다크 모드여도 화면 색을 바꾸지 않는다(항상 흰 배경).
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            s.setAlgorithmicDarkeningAllowed(false);
+        } else if (android.os.Build.VERSION.SDK_INT >= 29) {
+            s.setForceDark(WebSettings.FORCE_DARK_OFF);
+        }
         web.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
