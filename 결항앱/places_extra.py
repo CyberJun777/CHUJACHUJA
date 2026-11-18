@@ -10,7 +10,8 @@ S_182='한국관광공사 「제주올레 18-2코스 하추자 올레」'; S_181
 S_INT='신양2리 이장님 인터뷰(답사 질의응답, 2026)'; S_OSM='오픈스트리트맵(© OpenStreetMap contributors)'
 # 장소 이름은 map.json의 pois 이름과 같아야 한다. info: (항목, 내용), t: 문단, src: 출처. 사실은 출처에 있는 것만 쓴다.
 PLACES={
- '대왕산':{'info':[('위치','하추자도 신양2리'),('높이','해발 124.9 m'),('코스','제주올레 18-2코스(하추자 올레)')],
+ '대왕산':{'ph':[('daewangsan','대왕산 정상의 정자'),('daewangsan2','대왕산에서 내려다본 하추자 해안'),('daewangsan3','대왕산 정자로 가는 능선길')],
+   'info':[('위치','하추자도 신양2리'),('높이','해발 124.9 m'),('코스','제주올레 18-2코스(하추자 올레)')],
    't':['신양2리를 대표하는 산입니다. 하추자 올레가 몽돌해안과 맞닿은 마을길을 지나 졸복산과 대왕산을 차례로 오르내리고, 산꼭대기에서는 하추자 앞바다가 한눈에 내려다보입니다.',
         '이장님은 신양2리를 찾는 사람들이 주로 올레 18-2코스와 대왕산을 보러 온다고 했고, 마을에서 가장 아끼는 곳으로도 대왕산을 꼽았습니다.',
         '산속과 바닷가에 버려지는 쓰레기가 마을의 큰 걱정입니다. 가져온 쓰레기는 꼭 되가져가 주세요.'],
@@ -97,6 +98,12 @@ CSS='''
 .px-info{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:12px 0 0;font-size:14px;line-height:1.5}
 .px-info dt{color:var(--muted);white-space:nowrap}.px-info dd{margin:0}
 .plist small .px-b{color:var(--sea);font-weight:700}
+.plist button.px-hasth{grid-template-columns:30px minmax(0,1fr) 56px;align-items:center;row-gap:2px}
+.plist button.px-hasth>i{grid-column:1;grid-row:1/span 2}
+.plist button.px-hasth>span{grid-column:2;grid-row:1}
+.plist button.px-hasth>small{grid-column:2;grid-row:2;text-align:left}
+.plist button.px-hasth>.px-th{grid-column:3;grid-row:1/span 2}
+.plist .px-th{width:56px;height:56px;object-fit:cover;border-radius:10px;display:block}
 '''
 JS='''
 (function(){
@@ -110,7 +117,7 @@ JS='''
     var e=X.p[b.firstChild.nodeValue];if(!e)return;var d=document.createElement('div');d.className='px';d.innerHTML=body(e);
     if(e.t){var op=el.querySelector(':scope > p');if(op)op.style.display='none'}el.appendChild(d)}
   function list(){var el=$('plist');if(!el)return;[].forEach.call(el.querySelectorAll('button'),function(b){var n=b.querySelector('span'),s=b.querySelector('small');
-    if(!n||!s||s.querySelector('.px-b'))return;var e=X.p[n.textContent];if(e&&e.ph){var m=document.createElement('span');m.className='px-b';m.textContent=' · 사진';s.appendChild(m)}})}
+    if(!n||!s||s.querySelector('.px-b'))return;var e=X.p[n.textContent];if(e&&e.ph){var m=document.createElement('span');m.className='px-b';m.textContent=' · 사진';s.appendChild(m);var t=document.createElement('img');t.className='px-th';t.src=e.ph[0].s;t.alt='';b.appendChild(t);b.classList.add('px-hasth')}})}
   function all(){pick();list()}
   if(window.MutationObserver){['pick','plist'].forEach(function(id){var el=$(id);if(el)new MutationObserver(all).observe(el,{childList:true})})}
   all();
