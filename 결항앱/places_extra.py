@@ -85,6 +85,10 @@ PLACES={
    'src':[S_SANG]},
 }
 COURSE=None
+
+# 비짓제주(제주관광공사) 사진은 저작권 보유·무단 사용 금지라 복사하지 않고, 해당 페이지로 가는 링크만 단다.
+VJ={'상추자도항': '000000000019113', '예초리포구': '000000000019100', '신양항': '000000000021043', '용둠벙전망대': '000000000021036', '돈대산': '000000000018513', '후포해변': '000000000019073', '모진이몽돌해변': '000000000019087', '추자도등대': '000000000019077'}
+for _n,_c in VJ.items(): PLACES[_n]['vj']='https://www.visitjeju.net/kr/detail/view?contentsid=CNTS_'+_c
 CSS='''
 .px{grid-column:1/-1;margin-top:10px;min-width:0}
 .px-row{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:4px}
@@ -94,6 +98,7 @@ CSS='''
 .px-fig figcaption,.pick .px-src,.px-src{color:var(--muted);font-size:12.5px;line-height:1.5;margin:5px 0 0}
 .pick .px-t,.px-t{margin:10px 0 0;font-size:15px;line-height:1.65}
 .pick .px-none,.px-none{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+.px-vj{display:inline-flex;align-items:center;margin:12px 0 0;padding:9px 14px;border:1px solid var(--line);border-radius:999px;color:var(--sea);font-size:14px;font-weight:700;text-decoration:none}
 .px-noph{display:grid;place-items:center;aspect-ratio:3/1;border-radius:14px;background:var(--none);color:var(--muted);font-size:13.5px}
 .px-info{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:12px 0 0;font-size:14px;line-height:1.5}
 .px-info dt{color:var(--muted);white-space:nowrap}.px-info dd{margin:0}
@@ -112,6 +117,7 @@ JS='''
   function body(e){var h=e.ph?figs(e.ph):'<div class="px-noph">이 장소의 사진은 준비 중입니다</div>';
     if(e.info)h+='<dl class="px-info">'+e.info.map(function(r){return '<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>'}).join('')+'</dl>';
     if(e.t)h+=e.t.map(function(x){return '<p class="px-t">'+x+'</p>'}).join('');
+    if(e.vj)h+='<a class="px-vj" href="'+e.vj+'" target="_blank" rel="noopener">비짓제주에서 이곳 사진 보기 ↗</a>';
     if(e.src)h+='<p class="px-src">자료 출처: '+e.src.join(', ')+'</p>';return h}
   function pick(){var el=$('pick');if(!el||el.querySelector('.px'))return;var b=el.querySelector('b');if(!b||!b.firstChild)return;
     var e=X.p[b.firstChild.nodeValue];if(!e)return;var d=document.createElement('div');d.className='px';d.innerHTML=body(e);

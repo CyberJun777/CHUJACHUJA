@@ -1,6 +1,8 @@
 package kr.sinyang.sori;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -19,7 +21,21 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setTextZoom(100);
-        web.setWebViewClient(new WebViewClient());
+        // 앱 밖의 웹 주소(비짓제주 등)는 휴대폰 브라우저로 연다. 앱 화면은 그대로 남는다.
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                    } catch (Exception e) {
+                        return false;
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
         web.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
         setContentView(web);
         if (saved != null) {
