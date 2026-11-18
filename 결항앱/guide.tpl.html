@@ -116,6 +116,14 @@ canvas{width:100%;height:auto;display:block}
 .sched div{min-width:0}
 .sched em{font-style:normal;color:var(--muted);font-size:12px;display:block}
 .pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--none);color:var(--muted)}
+.shipnow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.shipnow li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.shipnow li:first-child{border-top:0}
+.shipnow b{display:block;font-size:16px}
+.shipnow span{display:block;font-size:12.5px;color:var(--muted)}
+.shipnow .why{color:var(--ink);font-size:13px;margin-top:2px}
+.shipnow .pill{font-size:13px;padding:4px 12px}
+.pill.warn{background:var(--warn);color:var(--surface)}
 .pill.ok{background:var(--ok);color:var(--surface)} .pill.go{background:var(--sea);color:var(--surface)} .pill.bad{background:var(--bad);color:var(--surface)}
 .wx{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
 .wx div{background:var(--bg);border-radius:12px;padding:10px 12px;min-width:0}
@@ -690,6 +698,12 @@ section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba
 
   <div class="notice"><b>실제 운항 기록으로 계산합니다.</b> 한국해양교통안전공단이 공개한 2022년 12월부터 2026년 5월까지의 여객선 운항 기록과, 같은 공단의 운항 스케줄·실시간 풍속 자료를 썼습니다. 여기에 기상청 추자도 해양기상부이의 과거 파고·풍속을 날짜별로 맞붙여 확률을 냅니다.</div>
 
+  <section id="nowsec">
+    <h2>오늘 추자도 배가 다니나요?</h2>
+    <ul class="shipnow" id="shipnow"></ul>
+    <p class="hint" id="shipnownote"></p>
+  </section>
+
   <div class="seg" id="ships" role="group" aria-label="여객선 선택"></div>
 
   <section class="verdict" aria-live="polite">
@@ -782,6 +796,7 @@ section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba
   var $=function(id){return document.getElementById(id)};
   var SEASON=['겨울철(12~2월)','봄철(3~5월)','여름철(6~8월)','가을철(9~11월)'];
   function seasonOf(m){return m===11||m<2?0:m<5?1:m<8?2:3}
+  D.ships=D.ships.filter(function(s){return s.last>='2025'});
   var now=new Date(), state={ship:0,month:now.getMonth()};
   $('today').textContent=D.live.fetched.slice(5,10).replace('-','월 ')+'일 '+D.live.fetched.slice(11)+' 갱신';
 
@@ -820,6 +835,20 @@ section, .info-card { border: 0; border-radius: 16px; box-shadow: 0 1px 4px rgba
   function bu0(v){return v<-90?'–':v.toFixed(1)}
   function live(){
     var L=D.live;
+    $('shipnow').innerHTML=D.ships.map(function(s){
+      var r=L.schedule.filter(function(x){return x.ship===s.name}),n=r.length;
+      function c(k){return r.filter(function(x){return x.se===k}).length}
+      var ok=c('정상'),ct=c('통제'),of=c('비운'),why=[];
+      r.forEach(function(x){if(x.why&&why.indexOf(x.why)<0)why.push(x.why)});
+      var cls,st,txt;
+      if(!n){cls='';st='편성 없음';txt='오늘 운항 스케줄에 이 배가 없습니다.'}
+      else if(ok===n){cls='ok';st='운항';txt='오늘 '+n+'편 모두 정상 운항'}
+      else if(ct===n){cls='bad';st='전편 통제';txt='오늘 '+n+'편 모두 통제'}
+      else if(of===n){cls='';st='휴항';txt='오늘 '+n+'편 모두 운항하지 않음'}
+      else if(ok){cls='warn';st='일부 운항';txt='오늘 '+n+'편 중 '+ok+'편 운항'+(ct?', '+ct+'편 통제':'')+(of?', '+of+'편 휴항':'')}
+      else{cls='bad';st='운항 안 함';txt='오늘 '+n+'편 중 '+ct+'편 통제, '+of+'편 휴항'}
+      return '<li><div><b>'+s.name+'</b><span>'+s.route+'</span><span class="why">'+txt+(why.length?' · 사유: '+why.join(', '):'')+'</span></div><span class="pill '+cls+'">'+st+'</span></li>'}).join('');
+    $('shipnownote').textContent=L.schedule.length?'지금 추자도를 오가는 여객선은 이 두 척입니다. 한국해양교통안전공단 운항 스케줄, '+L.fetched.slice(11)+' 기준.':'오늘 운항 스케줄을 받지 못했습니다.';
     $('livehead').textContent=(+L.date.slice(4,6))+'월 '+(+L.date.slice(6))+'일 실제 운항 상황';
     $('sched').innerHTML=L.schedule.length?L.schedule.map(function(s){
       return '<li><time>'+s.t.slice(0,2)+':'+s.t.slice(2)+'</time><div>'+s.ship+' <em>'+s.frm+' → '+s.to+(s.why?' · '+s.why:'')+'</em></div>'+pill(s)+'</li>'}).join('')
